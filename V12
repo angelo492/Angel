@@ -1,0 +1,195 @@
+-- RRX ELITE V12 - REDISEÑO PROFESIONAL
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local States = {
+	Visible = true,
+	Speed = 16,
+	SilentAim = false,
+	Tracers = false,
+	ESP = false,
+	HitboxSize = 2
+}
+
+-- LIMPIEZA DE UI PREVIA
+local oldUI = game:GetService("CoreGui"):FindFirstChild("RRX_V12") or LocalPlayer.PlayerGui:FindFirstChild("RRX_V12")
+if oldUI then oldUI:Destroy() end
+
+-- CREACIÓN DE UI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "RRX_V12"
+ScreenGui.ResetOnSpawn = false
+pcall(function() ScreenGui.Parent = game:GetService("CoreGui") end)
+if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer.PlayerGui end
+
+-- MARCO PRINCIPAL (Centrado y más pequeño)
+local Main = Instance.new("Frame")
+Main.Name = "Main"
+Main.Parent = ScreenGui
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+Main.BorderSizePixel = 0
+Main.Position = UDim2.new(0.5, -90, 0.5, -150) -- CENTRADO
+Main.Size = UDim2.new(0, 180, 0, 300) -- MÁS PEQUEÑO
+Main.ClipsDescendants = true
+Main.BackgroundTransparency = 1 -- Para la animación
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 10)
+Corner.Parent = Main
+
+local Stroke = Instance.new("UIStroke")
+Stroke.Color = Color3.fromRGB(255, 0, 4)
+Stroke.Thickness = 1.5
+Stroke.Parent = Main
+
+-- BARRA SUPERIOR (DRAGGABLE)
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1, 0, 0, 35)
+Header.BackgroundColor3 = Color3.fromRGB(255, 0, 4)
+Header.Parent = Main
+
+local Title = Instance.new("TextLabel")
+Title.Text = "🐺 RRX ELITE"
+Title.Size = UDim2.new(1, 0, 1, 0)
+Title.TextColor3 = Color3.new(1,1,1)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 14
+Title.BackgroundTransparency = 1
+Title.Parent = Header
+
+-- ANIMACIÓN DE ENTRADA
+Main:TweenPosition(UDim2.new(0.5, -90, 0.5, -150), "Out", "Back", 0.6)
+game:GetService("TweenService"):Create(Main, TweenInfo.new(0.6), {BackgroundTransparency = 0}):Play()
+
+-- SISTEMA DE MOVIMIENTO (MOVIBLE)
+local dragging, dragInput, dragStart, startPos
+Header.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = Main.Position
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - dragStart
+		Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = false
+	end
+end)
+
+-- CONTENEDOR DE BOTONES
+local Scroll = Instance.new("ScrollingFrame")
+Scroll.Size = UDim2.new(1, -10, 1, -45)
+Scroll.Position = UDim2.new(0, 5, 0, 40)
+Scroll.BackgroundTransparency = 1
+Scroll.CanvasSize = UDim2.new(0, 0, 1.5, 0)
+Scroll.ScrollBarThickness = 0
+Scroll.Parent = Main
+
+local List = Instance.new("UIListLayout")
+List.Padding = UDim.new(0, 5)
+List.Parent = Scroll
+
+local function AddBtn(name, callback)
+	local b = Instance.new("TextButton")
+	b.Size = UDim2.new(1, 0, 0, 35)
+	b.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	b.Text = name
+	b.TextColor3 = Color3.new(1,1,1)
+	b.Font = Enum.Font.Gotham
+	b.TextSize = 12
+	b.Parent = Scroll
+	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+	
+	local active = false
+	b.MouseButton1Click:Connect(function()
+		active = not active
+		b.BackgroundColor3 = active and Color3.fromRGB(150, 0, 0) or Color3.fromRGB(30, 30, 30)
+		callback(active)
+	end)
+end
+
+-----------------------------------------------------------
+-- LÓGICA DE FUNCIONES (REPARADA)
+-----------------------------------------------------------
+
+-- 1. VELOCIDAD
+AddBtn("Velocidad (22)", function(v) States.Speed = v and 22 or 16 end)
+RunService.Heartbeat:Connect(function()
+	if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+		LocalPlayer.Character.Humanoid.WalkSpeed = States.Speed
+	end
+end)
+
+-- 2. ESP Y ROLES (MM2 / UNIVERSAL)
+AddBtn("ESP & Roles", function(v) States.ESP = v end)
+
+-- 3. LÍNEAS (Tracers 2D - Más estables para móvil)
+local LinesFolder = Instance.new("Folder", ScreenGui)
+AddBtn("Líneas (Tracers)", function(v) States.Tracers = v end)
+
+-- 4. SILENT AIM
+AddBtn("Silent Aim", function(v) States.SilentAim = v end)
+
+-- 5. HITBOX
+AddBtn("Hitbox Grande", function(v) States.HitboxSize = v and 12 or 2 end)
+
+-- BUCLE PRINCIPAL DE RENDERIZADO (ESP, ROLES Y LÍNEAS)
+RunService.RenderStepped:Connect(function()
+	LinesFolder:ClearAllChildren()
+	for _, p in pairs(Players:GetPlayers()) do
+		if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+			local char = p.Character
+			local hrp = char.HumanoidRootPart
+			
+			-- Lógica de Roles (Rojo: Murder, Azul: Sheriff)
+			local tool = char:FindFirstChildOfClass("Tool") or p.Backpack:FindFirstChildOfClass("Tool")
+			local color = Color3.new(1,1,1)
+			if tool then
+				if tool.Name:lower():find("gun") or tool.Name:lower():find("revolver") then color = Color3.new(0,0,1)
+				elseif tool.Name:lower():find("knife") or tool.Name:lower():find("blade") then color = Color3.new(1,0,0) end
+			end
+
+			-- ESP
+			local high = char:FindFirstChild("RRX_H") or Instance.new("Highlight", char)
+			high.Name = "RRX_H"
+			high.Enabled = States.ESP
+			high.FillColor = color
+			
+			-- LÍNEAS
+			if States.Tracers then
+				local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+				if onScreen then
+					local l = Instance.new("Frame", LinesFolder)
+					l.BackgroundColor3 = color
+					l.BorderSizePixel = 0
+					l.Position = UDim2.new(0, pos.X, 0, pos.Y)
+					l.Size = UDim2.new(0, 2, 0, 2) -- Punto en el enemigo
+					
+					local line = Instance.new("Frame", LinesFolder)
+					line.BackgroundColor3 = color
+					line.Size = UDim2.new(0, 1, 0, (Vector2.new(pos.X, pos.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)).Magnitude)
+					line.Position = UDim2.new(0, Camera.ViewportSize.X/2, 0, Camera.ViewportSize.Y)
+					line.AnchorPoint = Vector2.new(0.5, 1)
+					line.Rotation = math.deg(math.atan2(pos.Y - Camera.ViewportSize.Y, pos.X - Camera.ViewportSize.X/2)) - 90
+				end
+			end
+			
+			-- HITBOX
+			hrp.Size = Vector3.new(States.HitboxSize, States.HitboxSize, States.HitboxSize)
+			hrp.Transparency = States.HitboxSize > 2 and 0.7 or 1
+		end
+	end
+end)
+
+print("RRX V12 Cargado: Animación activa y errores corregidos.")
