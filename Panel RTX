@@ -1,0 +1,206 @@
+-- RTX PREMIUM UNIVERSAL V4 - 6 OPCIONES
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- CONFIGURACIÓN DE ESTADOS
+local States = {
+    FOV = 70,
+    Speed = 16,
+    AimAssist = false,
+    Tracers = false,
+    ESP = false,
+    HitboxSize = 2 -- Tamaño normal
+}
+
+-- CREACIÓN DE LA UI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "RTX_V4_Universal"
+ScreenGui.ResetOnSpawn = false
+pcall(function() ScreenGui.Parent = game:GetService("CoreGui") end)
+if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer.PlayerGui end
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 220, 0, 350) -- Un poco más alto para la nueva opción
+MainFrame.Position = UDim2.new(0.05, 0, 0.3, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true 
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.Parent = MainFrame
+
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 35)
+TitleBar.BackgroundColor3 = Color3.fromRGB(255, 0, 4)
+TitleBar.Parent = MainFrame
+
+local TitleText = Instance.new("TextLabel")
+TitleText.Size = UDim2.new(1, 0, 1, 0)
+TitleText.Text = "  RTX V4 PREMIUM"
+TitleText.TextColor3 = Color3.new(1, 1, 1)
+TitleText.Font = Enum.Font.GothamBold
+TitleText.TextSize = 14
+TitleText.BackgroundTransparency = 1
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.Parent = TitleBar
+
+local Container = Instance.new("ScrollingFrame")
+Container.Position = UDim2.new(0, 5, 0, 45)
+Container.Size = UDim2.new(1, -10, 1, -55)
+Container.BackgroundTransparency = 1
+Container.CanvasSize = UDim2.new(0, 0, 1.5, 0)
+Container.ScrollBarThickness = 0
+Container.Parent = MainFrame
+
+local UIList = Instance.new("UIListLayout")
+UIList.Padding = UDim.new(0, 5)
+UIList.Parent = Container
+
+local function CreateOption(text, callback)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(1, 0, 0, 42)
+    Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    Btn.Text = text
+    Btn.TextColor3 = Color3.new(1, 1, 1)
+    Btn.Font = Enum.Font.Gotham
+    Btn.TextSize = 12
+    Btn.Parent = Container
+    
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 6)
+    Corner.Parent = Btn
+    
+    Btn.MouseButton1Click:Connect(function()
+        callback(Btn)
+    end)
+end
+
+-----------------------------------------------------------
+-- LÓGICA DE LAS FUNCIONES
+-----------------------------------------------------------
+
+-- 1. FOV
+CreateOption("FOV: Normal", function(btn)
+    States.FOV = (States.FOV == 70 and 120 or 70)
+    Camera.FieldOfView = States.FOV
+    btn.Text = "FOV: " .. (States.FOV == 70 and "Normal" or "Extremo")
+end)
+
+-- 2. SPEED
+CreateOption("Velocidad: 16", function(btn)
+    if States.Speed == 16 then States.Speed = 100 else States.Speed = 16 end
+    btn.Text = "Velocidad: " .. States.Speed
+end)
+
+RunService.RenderStepped:Connect(function()
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.WalkSpeed = States.Speed
+    end
+end)
+
+-- 3. AIM ASSIST (Presionar Click Derecho)
+CreateOption("AimAssist: OFF", function(btn)
+    States.AimAssist = not States.AimAssist
+    btn.Text = States.AimAssist and "AimAssist: ON" or "AimAssist: OFF"
+end)
+
+RunService.RenderStepped:Connect(function()
+    if States.AimAssist and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+        local target = nil
+        local dist = math.huge
+        for _, v in pairs(Players:GetPlayers()) do
+            if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("Head") then
+                local pos, onScreen = Camera:WorldToViewportPoint(v.Character.Head.Position)
+                if onScreen then
+                    local magnitude = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
+                    if magnitude < dist then dist = magnitude target = v end
+                end
+            end
+        end
+        if target then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.Head.Position)
+        end
+    end
+end)
+
+-- 4. LÍNEAS (TRACERS)
+local TracerFolders = Instance.new("Folder", ScreenGui)
+CreateOption("Tracers: OFF", function(btn)
+    States.Tracers = not States.Tracers
+    btn.Text = States.Tracers and "Tracers: ON" or "Tracers: OFF"
+    if not States.Tracers then TracerFolders:ClearAllChildren() end
+end)
+
+RunService.RenderStepped:Connect(function()
+    TracerFolders:ClearAllChildren()
+    if States.Tracers then
+        for _, v in pairs(Players:GetPlayers()) do
+            if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+                local partPos, onScreen = Camera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
+                if onScreen then
+                    local Line = Instance.new("Frame", TracerFolders)
+                    Line.Size = UDim2.new(0, 1, 0, (Vector2.new(partPos.X, partPos.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)).Magnitude)
+                    Line.Position = UDim2.new(0, Camera.ViewportSize.X/2, 0, Camera.ViewportSize.Y)
+                    Line.AnchorPoint = Vector2.new(0.5, 1)
+                    Line.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+                    Line.BorderSizePixel = 0
+                    Line.Rotation = math.deg(math.atan2(partPos.Y - Camera.ViewportSize.Y, partPos.X - Camera.ViewportSize.X/2)) - 90
+                end
+            end
+        end
+    end
+end)
+
+-- 5. ESP
+CreateOption("ESP: OFF", function(btn)
+    States.ESP = not States.ESP
+    btn.Text = States.ESP and "ESP: ON" or "ESP: OFF"
+end)
+
+RunService.Heartbeat:Connect(function()
+    for _, v in pairs(Players:GetPlayers()) do
+        if v ~= LocalPlayer and v.Character then
+            local highlight = v.Character:FindFirstChild("RTX_High")
+            if States.ESP then
+                if not highlight then
+                    highlight = Instance.new("Highlight", v.Character)
+                    highlight.Name = "RTX_High"
+                    highlight.FillColor = Color3.new(1,0,0)
+                end
+                highlight.Enabled = true
+            elseif highlight then
+                highlight.Enabled = false
+            end
+        end
+    end
+end)
+
+-- 6. HITBOX MODIFICABLE
+CreateOption("Hitbox: Normal", function(btn)
+    if States.HitboxSize == 2 then 
+        States.HitboxSize = 10 
+        btn.Text = "Hitbox: Grande (10)"
+    else 
+        States.HitboxSize = 2 
+        btn.Text = "Hitbox: Normal"
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    for _, v in pairs(Players:GetPlayers()) do
+        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = v.Character.HumanoidRootPart
+            hrp.Size = Vector3.new(States.HitboxSize, States.HitboxSize, States.HitboxSize)
+            hrp.Transparency = 0.7 -- Un poco visible para saber dónde disparar
+            hrp.BrickColor = BrickColor.new("Really red")
+            hrp.CanCollide = false
+        end
+    end
+end)
+
+print("RTX V4 Universal Cargado - 6 Opciones")
