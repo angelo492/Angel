@@ -1,0 +1,179 @@
+-- RRX ELITE V13 - DEFINITIVE EDITION
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local States = {
+	Visible = true,
+	Speed = 16,
+	SilentAim = false,
+	Tracers3D = false,
+	ESP = false,
+	HitboxSize = 2
+}
+
+-- UI SYSTEM
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "RRX_V13"
+ScreenGui.ResetOnSpawn = false
+pcall(function() ScreenGui.Parent = game:GetService("CoreGui") end)
+if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer.PlayerGui end
+
+local Main = Instance.new("Frame")
+Main.Size = UDim2.new(0, 190, 0, 320)
+Main.Position = UDim2.new(0.5, -95, 0.5, -160)
+Main.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+Main.BorderSizePixel = 0
+Main.Active = true
+Main.Draggable = true 
+Main.ClipsDescendants = true
+Main.Parent = ScreenGui
+
+local Corner = Instance.new("UICorner", Main)
+local Stroke = Instance.new("UIStroke", Main)
+Stroke.Color = Color3.fromRGB(255, 0, 4)
+Stroke.Thickness = 1.8
+
+-- HEADER CON MINIMIZAR
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1, 0, 0, 35)
+Header.BackgroundColor3 = Color3.fromRGB(20, 0, 0)
+Header.Parent = Main
+
+local Title = Instance.new("TextLabel")
+Title.Text = "🐺 RRX V13"
+Title.Size = UDim2.new(1, -40, 1, 0)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.TextColor3 = Color3.new(1,1,1)
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.BackgroundTransparency = 1
+Title.Parent = Header
+
+local MinBtn = Instance.new("TextButton")
+MinBtn.Size = UDim2.new(0, 30, 0, 30)
+MinBtn.Position = UDim2.new(1, -35, 0, 2)
+MinBtn.Text = "-"
+MinBtn.TextColor3 = Color3.new(1,1,1)
+MinBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+MinBtn.Font = Enum.Font.GothamBold
+MinBtn.Parent = Header
+Instance.new("UICorner", MinBtn)
+
+MinBtn.MouseButton1Click:Connect(function()
+	States.Visible = not States.Visible
+	Main:TweenSize(States.Visible and UDim2.new(0, 190, 0, 320) or UDim2.new(0, 190, 0, 35), "Out", "Quart", 0.3, true)
+	MinBtn.Text = States.Visible and "-" or "+"
+end)
+
+-- CONTENEDOR DE OPCIONES
+local Scroll = Instance.new("ScrollingFrame")
+Scroll.Size = UDim2.new(1, -10, 1, -45)
+Scroll.Position = UDim2.new(0, 5, 0, 40)
+Scroll.BackgroundTransparency = 1
+Scroll.CanvasSize = UDim2.new(0, 0, 1.8, 0)
+Scroll.ScrollBarThickness = 0
+Scroll.Parent = Main
+
+local List = Instance.new("UIListLayout", Scroll)
+List.Padding = UDim.new(0, 5)
+
+local function AddToggle(text, callback)
+	local b = Instance.new("TextButton", Scroll)
+	b.Size = UDim2.new(1, 0, 0, 35)
+	b.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	b.Text = "  " .. text
+	b.TextColor3 = Color3.fromRGB(200, 200, 200)
+	b.Font = Enum.Font.GothamMedium
+	b.TextXAlignment = Enum.TextXAlignment.Left
+	Instance.new("UICorner", b)
+	
+	local active = false
+	b.MouseButton1Click:Connect(function()
+		active = not active
+		b.BackgroundColor3 = active and Color3.fromRGB(150, 0, 0) or Color3.fromRGB(30, 30, 30)
+		b.TextColor3 = active and Color3.new(1,1,1) or Color3.fromRGB(200, 200, 200)
+		callback(active)
+	end)
+end
+
+-----------------------------------------------------------
+-- LÓGICA DE DETECCIÓN Y VISUALES
+-----------------------------------------------------------
+local TracerFolder = Instance.new("Folder", workspace)
+TracerFolder.Name = "RRX_3D_Tracers"
+
+local function GetRoleColor(p)
+	if p.Character then
+		local tool = p.Character:FindFirstChildOfClass("Tool") or p.Backpack:FindFirstChildOfClass("Tool")
+		if tool then
+			local name = tool.Name:lower()
+			if name:find("gun") or name:find("revolver") then return Color3.fromRGB(0, 140, 255) -- SHERIFF AZUL
+			elseif name:find("knife") or name:find("blade") then return Color3.fromRGB(255, 0, 0) -- MURDER ROJO
+			end
+		end
+	end
+	return Color3.fromRGB(0, 255, 0) -- INOCENTE VERDE
+end
+
+-- Bucle de Funciones
+RunService.RenderStepped:Connect(function()
+	TracerFolder:ClearAllChildren()
+	for _, p in pairs(Players:GetPlayers()) do
+		if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+			local char = p.Character
+			local hrp = char.HumanoidRootPart
+			local roleColor = GetRoleColor(p)
+
+			-- ESP & HIGHLIGHT
+			local high = char:FindFirstChild("RRX_High") or Instance.new("Highlight", char)
+			high.Name = "RRX_High"
+			high.Enabled = States.ESP
+			high.FillColor = roleColor
+			high.OutlineTransparency = 0
+
+			-- LÍNEAS 3D (BEAMS)
+			if States.Tracers3D then
+				local p1 = Instance.new("Part", TracerFolder)
+				p1.Transparency, p1.CanCollide, p1.Anchored = 1, false, true
+				p1.Position = (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")) and LocalPlayer.Character.HumanoidRootPart.Position or Vector3.new(0,0,0)
+				
+				local p2 = Instance.new("Part", TracerFolder)
+				p2.Transparency, p2.CanCollide, p2.Anchored = 1, false, true
+				p2.Position = hrp.Position
+				
+				local Beam = Instance.new("Beam", p1)
+				Beam.Attachment0 = Instance.new("Attachment", p1)
+				Beam.Attachment1 = Instance.new("Attachment", p2)
+				Beam.Color = ColorSequence.new(roleColor)
+				Beam.Width0, Beam.Width1 = 0.05, 0.05
+				Beam.FaceCamera = true
+			end
+
+			-- HITBOX
+			hrp.Size = Vector3.new(States.HitboxSize, States.HitboxSize, States.HitboxSize)
+			hrp.Transparency = States.HitboxSize > 2 and 0.8 or 1
+		end
+	end
+end)
+
+-- OPCIONES DEL MENÚ
+AddToggle("Silent Aim Universal", function(v) States.SilentAim = v end)
+AddToggle("Líneas 3D Neón", function(v) States.Tracers3D = v end)
+AddToggle("ESP Roles (Color)", function(v) States.ESP = v end)
+AddToggle("Velocidad Pro (22)", function(v) States.Speed = v and 22 or 16 end)
+AddToggle("Hitbox Grande", function(v) States.HitboxSize = v and 12 or 2 end)
+
+-- Bucle Speed
+RunService.Heartbeat:Connect(function()
+	if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+		LocalPlayer.Character.Humanoid.WalkSpeed = States.Speed
+	end
+end)
+
+-- Animación de Entrada
+Main.BackgroundTransparency = 1
+game:GetService("TweenService"):Create(Main, TweenInfo.new(0.5), {BackgroundTransparency = 0}):Play()
+print("RRX V13 Cargado - Botón y Colores Reparados.")
