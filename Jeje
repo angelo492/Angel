@@ -1,0 +1,188 @@
+-- SONYC ELITE V5 - MODULAR & SILENT AIM FIX
+local Player = game.Players.LocalPlayer
+local Mouse = Player:GetMouse()
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+
+-- ESTADOS DE LAS FUNCIONES
+local SONYC_CONFIG = {
+    SpeedEnabled = false,
+    SpeedValue = 16,
+    EspEnabled = false,
+    HitboxEnabled = false,
+    HitboxSize = 2,
+    SilentAim = false
+}
+
+-- UI PRINCIPAL
+local ScreenGui = Instance.new("ScreenGui", Player.PlayerGui)
+ScreenGui.Name = "SONYC_V5"
+
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 280, 0, 450)
+MainFrame.Position = UDim2.new(0.5, -140, 0.2, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+MainFrame.Active = true
+MainFrame.Draggable = true
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 15)
+local Stroke = Instance.new("UIStroke", MainFrame)
+Stroke.Color = Color3.fromRGB(0, 160, 255)
+Stroke.Thickness = 2
+
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.Text = "SONYC ELITE V5"
+Title.Font = Enum.Font.GothamBold
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.BackgroundTransparency = 1
+Title.TextSize = 20
+
+local Container = Instance.new("ScrollingFrame", MainFrame)
+Container.Size = UDim2.new(1, -20, 1, -60)
+Container.Position = UDim2.new(0, 10, 0, 50)
+Container.BackgroundTransparency = 1
+Container.CanvasSize = UDim2.new(0, 0, 1.2, 0)
+Container.ScrollBarThickness = 0
+local Layout = Instance.new("UIListLayout", Container)
+Layout.Padding = UDim.new(0, 10)
+
+-----------------------------------------------------------
+-- CREADORES DE INTERFAZ (TOGGLES Y SLIDERS)
+-----------------------------------------------------------
+local function CreateToggle(text, config_key)
+    local Btn = Instance.new("TextButton", Container)
+    Btn.Size = UDim2.new(0.95, 0, 0, 35)
+    Btn.Text = text .. ": OFF"
+    Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    Btn.TextColor3 = Color3.new(1, 1, 1)
+    Instance.new("UICorner", Btn)
+
+    Btn.MouseButton1Click:Connect(function()
+        SONYC_CONFIG[config_key] = not SONYC_CONFIG[config_key]
+        Btn.Text = text .. (SONYC_CONFIG[config_key] and ": ON" or ": OFF")
+        Btn.BackgroundColor3 = SONYC_CONFIG[config_key] and Color3.fromRGB(0, 120, 200) or Color3.fromRGB(40, 40, 50)
+        
+        -- Resetear valores si se apaga
+        if config_key == "HitboxEnabled" and not SONYC_CONFIG[config_key] then
+            for _, v in pairs(game.Players:GetPlayers()) do
+                if v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+                    v.Character.HumanoidRootPart.Size = Vector3.new(2, 2, 1)
+                    v.Character.HumanoidRootPart.Transparency = 1
+                end
+            end
+        end
+    end)
+end
+
+local function CreateSlider(name, min, max, config_key)
+    local Label = Instance.new("TextLabel", Container)
+    Label.Size = UDim2.new(0.9, 0, 0, 20)
+    Label.Text = name .. ": " .. SONYC_CONFIG[config_key]
+    Label.TextColor3 = Color3.new(0.8, 0.8, 0.8)
+    Label.BackgroundTransparency = 1
+
+    local Slider = Instance.new("TextButton", Container)
+    Slider.Size = UDim2.new(0.9, 0, 0, 10)
+    Slider.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    Slider.Text = ""
+    Instance.new("UICorner", Slider)
+
+    local Fill = Instance.new("Frame", Slider)
+    Fill.Size = UDim2.new(0.5, 0, 1, 0)
+    Fill.BackgroundColor3 = Color3.fromRGB(0, 160, 255)
+    Instance.new("UICorner", Fill)
+
+    Slider.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local move = RunService.RenderStepped:Connect(function()
+                local pos = math.clamp((Mouse.X - Slider.AbsolutePosition.X) / Slider.AbsoluteSize.X, 0, 1)
+                Fill.Size = UDim2.new(pos, 0, 1, 0)
+                local val = math.floor(min + (max - min) * pos)
+                SONYC_CONFIG[config_key] = val
+                Label.Text = name .. ": " .. val
+            end)
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then move:Disconnect() end
+            end)
+        end
+    end)
+end
+
+-----------------------------------------------------------
+-- ACTIVACIÓN DE FUNCIONES
+-----------------------------------------------------------
+
+CreateToggle("ESP ROLES", "EspEnabled")
+CreateToggle("SILENT AIM", "SilentAim")
+CreateToggle("SPEED HACK", "SpeedEnabled")
+CreateSlider("Velocidad", 16, 150, "SpeedValue")
+CreateToggle("HITBOX EXPANDER", "HitboxEnabled")
+CreateSlider("Tamaño Hitbox", 2, 50, "HitboxSize")
+
+-- Bucle Principal
+RunService.RenderStepped:Connect(function()
+    -- Lógica de Velocidad
+    if SONYC_CONFIG.SpeedEnabled and Player.Character and Player.Character:FindFirstChild("Humanoid") then
+        Player.Character.Humanoid.WalkSpeed = SONYC_CONFIG.SpeedValue
+    elseif Player.Character and Player.Character:FindFirstChild("Humanoid") then
+        Player.Character.Humanoid.WalkSpeed = 16
+    end
+
+    -- Lógica de Hitbox y ESP
+    for _, v in pairs(game.Players:GetPlayers()) do
+        if v ~= Player and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+            -- Hitbox
+            if SONYC_CONFIG.HitboxEnabled then
+                v.Character.HumanoidRootPart.Size = Vector3.new(SONYC_CONFIG.HitboxSize, SONYC_CONFIG.HitboxSize, SONYC_CONFIG.HitboxSize)
+                v.Character.HumanoidRootPart.Transparency = 0.8
+                v.Character.HumanoidRootPart.CanCollide = false
+            end
+            
+            -- ESP (Highlights)
+            local high = v.Character:FindFirstChild("SONYC_ESP")
+            if SONYC_CONFIG.EspEnabled then
+                if not high then
+                    high = Instance.new("Highlight", v.Character)
+                    high.Name = "SONYC_ESP"
+                end
+                if v.Backpack:FindFirstChild("Knife") or v.Character:FindFirstChild("Knife") then
+                    high.FillColor = Color3.fromRGB(255, 0, 0) -- Murder
+                elseif v.Backpack:FindFirstChild("Gun") or v.Character:FindFirstChild("Gun") then
+                    high.FillColor = Color3.fromRGB(0, 100, 255) -- Sheriff
+                else
+                    high.FillColor = Color3.fromRGB(0, 255, 0) -- Inocente
+                end
+                high.Enabled = true
+            elseif high then
+                high.Enabled = false
+            end
+        end
+    end
+end)
+
+-- FIX SILENT AIM (Metatable Hook)
+local mt = getrawmetatable(game)
+setreadonly(mt, false)
+local oldNamecall = mt.__namecall
+
+mt.__namecall = newcclosure(function(self, ...)
+    local args = {...}
+    local method = getnamecallmethod()
+
+    if SONYC_CONFIG.SilentAim and method == "FireServer" and tostring(self) == "Shoot" then
+        for _, v in pairs(game.Players:GetPlayers()) do
+            if v ~= Player and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+                -- Si somos Inocentes/Sheriff, apuntar al Murder. Si somos Murder, al Sheriff.
+                local isMurder = v.Character:FindFirstChild("Knife") or v.Backpack:FindFirstChild("Knife")
+                if isMurder then
+                    args[1] = v.Character.HumanoidRootPart.Position
+                    return self.FireServer(self, unpack(args))
+                end
+            end
+        end
+    end
+    return oldNamecall(self, ...)
+end)
+setreadonly(mt, true)
+
+print("SONYC ELITE V5 CARGADO - TODO MODULAR")
