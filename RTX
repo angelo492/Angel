@@ -1,0 +1,108 @@
+-- SERVICIOS
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+
+-- CREACIÓN DE LA UI (PROTEGIDA)
+local ScreenGui = Instance.new("ScreenGui")
+-- Intentar colocar en CoreGui para que no se borre al morir, si falla va a PlayerGui
+local success, err = pcall(function() ScreenGui.Parent = CoreGui end)
+if not success then ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui") end
+
+ScreenGui.Name = "RTX_Universal_HUD"
+ScreenGui.ResetOnSpawn = false
+
+-- CONTENEDOR PRINCIPAL
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20) -- Fondo oscuro moderno
+MainFrame.BorderSizePixel = 0
+MainFrame.Position = UDim2.new(0.1, 0, 0.1, 0)
+MainFrame.Size = UDim2.new(0, 220, 0, 250)
+MainFrame.ClipsDescendants = true
+
+-- BORDES REDONDEADOS
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.Parent = MainFrame
+
+-- BARRA DE TÍTULO (ROJO RTX)
+local TitleBar = Instance.new("Frame")
+TitleBar.Name = "TitleBar"
+TitleBar.Parent = MainFrame
+TitleBar.BackgroundColor3 = Color3.fromRGB(255, 0, 4)
+TitleBar.Size = UDim2.new(1, 0, 0, 35)
+
+local UICornerTitle = Instance.new("UICorner")
+UICornerTitle.CornerRadius = UDim.new(0, 10)
+UICornerTitle.Parent = TitleBar
+
+local TitleText = Instance.new("TextLabel")
+TitleText.Parent = TitleBar
+TitleText.Text = "  RTX PANEL"
+TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleText.Font = Enum.Font.GothamBold
+TitleText.TextSize = 16
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.Size = UDim2.new(1, -40, 1, 0)
+TitleText.BackgroundTransparency = 1
+
+-- BOTÓN DESPLEGABLE
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Parent = TitleBar
+ToggleBtn.Text = "▲"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.BackgroundTransparency = 1
+ToggleBtn.Position = UDim2.new(1, -35, 0, 0)
+ToggleBtn.Size = UDim2.new(0, 35, 1, 0)
+ToggleBtn.TextSize = 14
+
+-- CONTENIDO (AQUÍ PUEDES AGREGAR TUS BOTONES)
+local Content = Instance.new("Frame")
+Content.Name = "Content"
+Content.Parent = MainFrame
+Content.BackgroundTransparency = 1
+Content.Position = UDim2.new(0, 0, 0, 40)
+Content.Size = UDim2.new(1, 0, 1, -40)
+
+-----------------------------------------------------------
+-- LÓGICA: MOVIBLE (DRAGGABLE)
+-----------------------------------------------------------
+local dragging, dragInput, dragStart, startPos
+
+TitleBar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = MainFrame.Position
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+		local delta = input.Position - dragStart
+		MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+
+TitleBar.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
+	end
+end)
+
+-----------------------------------------------------------
+-- LÓGICA: DESPLEGABLE (TOGGLE)
+-----------------------------------------------------------
+local expanded = true
+ToggleBtn.MouseButton1Click:Connect(function()
+	expanded = not expanded
+	local targetSize = expanded and UDim2.new(0, 220, 0, 250) or UDim2.new(0, 220, 0, 35)
+	
+	TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart), {Size = targetSize}):Play()
+	ToggleBtn.Text = expanded and "▲" or "▼"
+end)
+
+print("RTX Universal HUD Activado")
+                           
