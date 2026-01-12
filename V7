@@ -1,0 +1,228 @@
+-- RTX PREMIUM UNIVERSAL V7
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local States = {
+    Visible = true,
+    FOV = 70,
+    Speed = 16,
+    AimAssist = false,
+    Tracers3D = false,
+    ESP = false,
+    HitboxSize = 2,
+    MarkOnHit = false -- Nueva opción
+}
+
+-- UI PRINCIPAL
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "RTX_V7_Final"
+ScreenGui.ResetOnSpawn = false
+pcall(function() ScreenGui.Parent = game:GetService("CoreGui") end)
+if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer.PlayerGui end
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 220, 0, 420) -- Ajustado para 7 opciones
+MainFrame.Position = UDim2.new(0.05, 0, 0.3, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true 
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.Parent = MainFrame
+
+-- BARRA DE TÍTULO
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 35)
+TitleBar.BackgroundColor3 = Color3.fromRGB(255, 0, 4)
+TitleBar.Parent = MainFrame
+
+local TitleText = Instance.new("TextLabel")
+TitleText.Size = UDim2.new(1, -40, 1, 0)
+TitleText.Text = "  RTX V7 PREMIUM"
+TitleText.TextColor3 = Color3.new(1, 1, 1)
+TitleText.Font = Enum.Font.GothamBold
+TitleText.BackgroundTransparency = 1
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.Parent = TitleBar
+
+local MinBtn = Instance.new("TextButton")
+MinBtn.Size = UDim2.new(0, 35, 0, 35)
+MinBtn.Position = UDim2.new(1, -35, 0, 0)
+MinBtn.Text = "-"
+MinBtn.BackgroundTransparency = 1
+MinBtn.TextColor3 = Color3.new(1,1,1)
+MinBtn.TextSize = 20
+MinBtn.Parent = TitleBar
+
+MinBtn.MouseButton1Click:Connect(function()
+    States.Visible = not States.Visible
+    MainFrame:TweenSize(States.Visible and UDim2.new(0, 220, 0, 420) or UDim2.new(0, 220, 0, 35), "Out", "Quart", 0.3, true)
+    MinBtn.Text = States.Visible and "-" or "+"
+end)
+
+local Container = Instance.new("ScrollingFrame")
+Container.Position = UDim2.new(0, 5, 0, 45)
+Container.Size = UDim2.new(1, -10, 1, -55)
+Container.BackgroundTransparency = 1
+Container.CanvasSize = UDim2.new(0, 0, 1.8, 0)
+Container.ScrollBarThickness = 0
+Container.Parent = MainFrame
+
+local UIList = Instance.new("UIListLayout")
+UIList.Padding = UDim.new(0, 5)
+UIList.Parent = Container
+
+local function CreateOption(text, callback)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(1, 0, 0, 40)
+    Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    Btn.Text = text
+    Btn.TextColor3 = Color3.new(1, 1, 1)
+    Btn.Font = Enum.Font.Gotham
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
+    Btn.Parent = Container
+    Btn.MouseButton1Click:Connect(function() callback(Btn) end)
+end
+
+-----------------------------------------------------------
+-- LÓGICA DE LAS OPCIONES
+-----------------------------------------------------------
+
+-- 1. FOV
+CreateOption("FOV: Normal", function(btn)
+    States.FOV = (States.FOV == 70 and 110 or 70)
+    Camera.FieldOfView = States.FOV
+    btn.Text = "FOV: " .. (States.FOV == 70 and "Normal" or "Extremo")
+end)
+
+-- 2. SPEED (Limite 22)
+CreateOption("Speed: 16", function(btn)
+    States.Speed = (States.Speed == 16 and 22 or 16)
+    btn.Text = "Speed: " .. States.Speed
+end)
+
+RunService.Heartbeat:Connect(function()
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.WalkSpeed = States.Speed
+    end
+end)
+
+-- 3. AIM ASSIST + AUTO SHOOT
+CreateOption("Aim & AutoShoot: OFF", function(btn)
+    States.AimAssist = not States.AimAssist
+    btn.Text = States.AimAssist and "Aim & AutoShoot: ON" or "Aim & AutoShoot: OFF"
+end)
+
+RunService.RenderStepped:Connect(function()
+    if States.AimAssist then
+        local target, closest = nil, math.huge
+        for _, v in pairs(Players:GetPlayers()) do
+            if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("Head") then
+                local pos, vis = Camera:WorldToViewportPoint(v.Character.Head.Position)
+                if vis then
+                    local mag = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
+                    if mag < closest then closest = mag target = v end
+                end
+            end
+        end
+        if target then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.Head.Position)
+            if typeof(mouse1click) == "function" then mouse1click() else mouse1press() task.wait() mouse1release() end
+        end
+    end
+end)
+
+-- 4. TRACERS 3D
+local TracerFolder3D = Instance.new("Folder", workspace)
+CreateOption("Líneas 3D: OFF", function(btn)
+    States.Tracers3D = not States.Tracers3D
+    btn.Text = States.Tracers3D and "Líneas 3D: ON" or "Líneas 3D: OFF"
+    if not States.Tracers3D then TracerFolder3D:ClearAllChildren() end
+end)
+
+RunService.RenderStepped:Connect(function()
+    TracerFolder3D:ClearAllChildren()
+    if States.Tracers3D then
+        for _, v in pairs(Players:GetPlayers()) do
+            if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+                local p1 = (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")) and LocalPlayer.Character.HumanoidRootPart.Position or Vector3.new(0,0,0)
+                local p2 = v.Character.HumanoidRootPart.Position
+                local Part = Instance.new("Part", TracerFolder3D)
+                Part.Anchored, Part.CanCollide = true, false
+                Part.Color, Part.Material = Color3.fromRGB(255, 0, 4), Enum.Material.Neon
+                Part.Size = Vector3.new(0.1, 0.1, (p1 - p2).Magnitude)
+                Part.CFrame = CFrame.new(p1:Lerp(p2, 0.5), p2)
+            end
+        end
+    end
+end)
+
+-- 5. ESP
+CreateOption("ESP: OFF", function(btn)
+    States.ESP = not States.ESP
+    btn.Text = States.ESP and "ESP: ON" or "ESP: OFF"
+end)
+
+RunService.Heartbeat:Connect(function()
+    for _, v in pairs(Players:GetPlayers()) do
+        if v ~= LocalPlayer and v.Character then
+            local h = v.Character:FindFirstChild("RTX_H") or Instance.new("Highlight", v.Character)
+            h.Name = "RTX_H"
+            h.FillColor = Color3.fromRGB(255, 0, 4)
+            h.Enabled = States.ESP
+        end
+    end
+end)
+
+-- 6. HITBOX
+CreateOption("Hitbox Grande: OFF", function(btn)
+    States.HitboxSize = (States.HitboxSize == 2 and 12 or 2)
+    btn.Text = States.HitboxSize == 12 and "Hitbox: ON" or "Hitbox: OFF"
+end)
+
+RunService.RenderStepped:Connect(function()
+    for _, v in pairs(Players:GetPlayers()) do
+        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+            v.Character.HumanoidRootPart.Size = Vector3.new(States.HitboxSize, States.HitboxSize, States.HitboxSize)
+            v.Character.HumanoidRootPart.Transparency = (States.HitboxSize > 2 and 0.8 or 1)
+            v.Character.HumanoidRootPart.CanCollide = false
+        end
+    end
+end)
+
+-- 7. MARK ON HIT (NUEVA)
+CreateOption("Mark on Hit: OFF", function(btn)
+    States.MarkOnHit = not States.MarkOnHit
+    btn.Text = States.MarkOnHit and "Mark on Hit: ON" or "Mark on Hit: OFF"
+end)
+
+local function TagPlayer(char)
+    local h = char:FindFirstChild("HitMarker") or Instance.new("Highlight", char)
+    h.Name = "HitMarker"
+    h.FillColor = Color3.fromRGB(255, 0, 0)
+    h.FillOpacity = 0.5
+    h.OutlineColor = Color3.new(1, 1, 1)
+    h.Enabled = true
+    task.delay(2, function() if h then h.Enabled = false end end)
+end
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    char.ChildAdded:Connect(function(child)
+        if child:IsA("Tool") and States.MarkOnHit then
+            child.Handle.Touched:Connect(function(hit)
+                local enemy = hit.Parent:FindFirstChild("Humanoid") and hit.Parent
+                if enemy and enemy.Name ~= LocalPlayer.Name then
+                    TagPlayer(enemy)
+                end
+            end)
+        end
+    end)
+end)
+
+print("RTX V7 Cargado con Mark on Hit")
