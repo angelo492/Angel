@@ -1,0 +1,157 @@
+-- SONYC UNIVERSAL HUD V3 - ESTILO NEÓN CON MINIMIZAR
+local Player = game.Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+-- Crear ScreenGui
+local ScreenGui = Instance.new("ScreenGui", PlayerGui)
+ScreenGui.Name = "SONYC_Pro"
+ScreenGui.ResetOnSpawn = false
+
+-- Marco Principal
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 260, 0, 320)
+MainFrame.Position = UDim2.new(0.5, -130, 0.4, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 25)
+MainFrame.BackgroundTransparency = 0.15
+MainFrame.Active = true
+MainFrame.Draggable = true -- Movible
+
+local MainCorner = Instance.new("UICorner", MainFrame)
+MainCorner.CornerRadius = UDim.new(0, 15)
+
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Thickness = 3
+MainStroke.Color = Color3.fromRGB(0, 150, 255)
+
+-- BARRA DE TÍTULO
+local TitleBar = Instance.new("Frame", MainFrame)
+TitleBar.Size = UDim2.new(1, 0, 0, 50)
+TitleBar.BackgroundTransparency = 1
+
+local TitleText = Instance.new("TextLabel", TitleBar)
+TitleText.Size = UDim2.new(1, -80, 1, 0)
+TitleText.Position = UDim2.new(0, 15, 0, 0)
+TitleText.Text = "SONYC"
+TitleText.Font = Enum.Font.GothamBold
+TitleText.TextSize = 24
+TitleText.TextColor3 = Color3.new(1, 1, 1)
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.BackgroundTransparency = 1
+
+-- BOTÓN MINIMIZAR (Cápsula pequeña)
+local MinBtn = Instance.new("TextButton", TitleBar)
+MinBtn.Size = UDim2.new(0, 30, 0, 30)
+MinBtn.Position = UDim2.new(1, -75, 0.5, -15)
+MinBtn.Text = "-"
+MinBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+MinBtn.TextColor3 = Color3.new(1, 1, 1)
+MinBtn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(1, 0)
+
+-- BOTÓN CERRAR/MAXIMIZAR
+local CloseBtn = Instance.new("TextButton", TitleBar)
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -40, 0.5, -15)
+CloseBtn.Text = "X"
+CloseBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+CloseBtn.TextColor3 = Color3.new(1, 1, 1)
+CloseBtn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(1, 0)
+
+-- CONTENEDOR DE OPCIONES
+local Content = Instance.new("Frame", MainFrame)
+Content.Size = UDim2.new(1, 0, 1, -50)
+Content.Position = UDim2.new(0, 0, 0, 50)
+Content.BackgroundTransparency = 1
+
+local Layout = Instance.new("UIListLayout", Content)
+Layout.Padding = UDim.new(0, 10)
+Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+-----------------------------------------------------------
+-- FUNCIONALIDAD DE INTERFAZ
+-----------------------------------------------------------
+local minimized = false
+MinBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    if minimized then
+        Content.Visible = false
+        MainFrame:TweenSize(UDim2.new(0, 260, 0, 50), "Out", "Quart", 0.3, true)
+        MinBtn.Text = "+"
+    else
+        MainFrame:TweenSize(UDim2.new(0, 260, 0, 320), "Out", "Quart", 0.3, true)
+        task.wait(0.3)
+        Content.Visible = true
+        MinBtn.Text = "-"
+    end
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui.Enabled = false -- Oculta todo el HUD
+end)
+
+-- Tecla "K" para volver a mostrar el HUD si se cerró
+UIS.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.K then
+        ScreenGui.Enabled = not ScreenGui.Enabled
+    end
+end)
+
+-----------------------------------------------------------
+-- LÓGICA INSTA-KILL (MM2)
+-----------------------------------------------------------
+local function CreateOption(name)
+    local btn = Instance.new("TextButton", Content)
+    btn.Size = UDim2.new(0.9, 0, 0, 45)
+    btn.BackgroundColor3 = Color3.fromRGB(20, 20, 40)
+    btn.Text = name
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.GothamMedium
+    btn.TextSize = 16
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
+    local stroke = Instance.new("UIStroke", btn)
+    stroke.Color = Color3.fromRGB(0, 150, 255)
+    stroke.Thickness = 2
+    return btn, stroke
+end
+
+local killBtn, killStroke = CreateOption("INSTA-KILL: OFF")
+local killActive = false
+
+killBtn.MouseButton1Click:Connect(function()
+    killActive = not killActive
+    if killActive then
+        killBtn.Text = "INSTA-KILL: ON"
+        killStroke.Color = Color3.fromRGB(50, 255, 100)
+    else
+        killBtn.Text = "INSTA-KILL: OFF"
+        killStroke.Color = Color3.fromRGB(255, 50, 50)
+    end
+end)
+
+-- Bucle de ataque
+RunService.RenderStepped:Connect(function()
+    if killActive and game.PlaceId == 142823291 then
+        local gun = Player.Character and Player.Character:FindFirstChild("Gun")
+        if gun then
+            for _, v in pairs(game.Players:GetPlayers()) do
+                if v ~= Player and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+                    -- Detectar objetivos: Murderer o Sheriff
+                    local isTarget = v.Backpack:FindFirstChild("Knife") or v.Character:FindFirstChild("Knife") or v.Backpack:FindFirstChild("Gun") or v.Character:FindFirstChild("Gun")
+                    
+                    if isTarget and v.Character.Humanoid.Health > 0 then
+                        -- Intentar disparar (Usa el RemoteEvent de MM2)
+                        local shootEvent = game:GetService("ReplicatedStorage"):FindFirstChild("Shoot", true)
+                        if shootEvent then
+                            shootEvent:FireServer(v.Character.HumanoidRootPart.Position, v.Character.HumanoidRootPart)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+print("SONYC V3 Cargado. Presiona 'K' para ocultar/mostrar.")
