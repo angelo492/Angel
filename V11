@@ -1,0 +1,183 @@
+-- RRX ELITE UNIVERSAL V11
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local VirtualUser = game:GetService("VirtualUser")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local States = {
+    Visible = true,
+    FOV = 70,
+    Speed = 16,
+    AimAssist = false,
+    SilentAim = false,
+    Tracers3D = false,
+    ESP = false,
+    HitboxSize = 2,
+    MarkRoles = true -- Opción activa por defecto
+}
+
+-- UI RRX PROFESIONAL
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "RRX_V11_Elite"
+ScreenGui.ResetOnSpawn = false
+pcall(function() ScreenGui.Parent = game:GetService("CoreGui") end)
+if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer.PlayerGui end
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 240, 0, 450)
+MainFrame.Position = UDim2.new(0.5, -120, 0.4, -225)
+MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true 
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = MainFrame
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(255, 0, 4)
+UIStroke.Thickness = 2
+UIStroke.Parent = MainFrame
+
+-- BARRA DE TÍTULO CON BOTÓN MINIMIZAR
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1, 0, 0, 45)
+Header.BackgroundColor3 = Color3.fromRGB(20, 0, 0)
+Header.Parent = MainFrame
+
+local Logo = Instance.new("TextLabel")
+Logo.Text = "🐺 RRX ELITE V11"
+Logo.Size = UDim2.new(1, -40, 1, 0)
+Logo.TextColor3 = Color3.fromRGB(255, 0, 4)
+Logo.Font = Enum.Font.GothamBlack
+Logo.TextSize = 18
+Logo.BackgroundTransparency = 1
+Logo.TextXAlignment = Enum.TextXAlignment.Left
+Logo.Position = UDim2.new(0, 10, 0, 0)
+Logo.Parent = Header
+
+local MinBtn = Instance.new("TextButton")
+MinBtn.Size = UDim2.new(0, 35, 0, 35)
+MinBtn.Position = UDim2.new(1, -40, 0, 5)
+MinBtn.Text = "-"
+MinBtn.TextColor3 = Color3.new(1,1,1)
+MinBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+MinBtn.Font = Enum.Font.GothamBold
+MinBtn.Parent = Header
+Instance.new("UICorner", MinBtn)
+
+MinBtn.MouseButton1Click:Connect(function()
+    States.Visible = not States.Visible
+    MainFrame:TweenSize(States.Visible and UDim2.new(0, 240, 0, 450) or UDim2.new(0, 240, 0, 45), "Out", "Quart", 0.3, true)
+    MinBtn.Text = States.Visible and "-" or "+"
+end)
+
+-- CONTENEDOR
+local Container = Instance.new("ScrollingFrame")
+Container.Position = UDim2.new(0, 10, 0, 55)
+Container.Size = UDim2.new(1, -20, 1, -65)
+Container.BackgroundTransparency = 1
+Container.CanvasSize = UDim2.new(0, 0, 2, 0)
+Container.ScrollBarThickness = 0
+Container.Parent = MainFrame
+
+local UIList = Instance.new("UIListLayout")
+UIList.Padding = UDim.new(0, 8)
+UIList.Parent = Container
+
+local function CreateToggle(text, callback)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(1, 0, 0, 40)
+    Btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    Btn.Text = "  " .. text
+    Btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    Btn.Font = Enum.Font.GothamMedium
+    Btn.TextXAlignment = Enum.TextXAlignment.Left
+    Btn.Parent = Container
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
+    local Stroke = Instance.new("UIStroke", Btn)
+    Stroke.Color = Color3.fromRGB(40, 40, 40)
+    
+    local active = false
+    Btn.MouseButton1Click:Connect(function()
+        active = not active
+        Stroke.Color = active and Color3.fromRGB(255, 0, 4) or Color3.fromRGB(40, 40, 40)
+        Btn.TextColor3 = active and Color3.new(1,1,1) or Color3.fromRGB(200, 200, 200)
+        callback(active)
+    end)
+end
+
+-----------------------------------------------------------
+-- LÓGICA DE ROLES (SHERIFF AZUL / MURDER ROJO)
+-----------------------------------------------------------
+local function GetPlayerRole(player)
+    if not player.Character then return nil end
+    -- Busca armas en el personaje o mochila
+    local tool = player.Character:FindFirstChildOfClass("Tool") or player.Backpack:FindFirstChildOfClass("Tool")
+    if tool then
+        if tool.Name:lower():find("gun") or tool.Name:lower():find("revolver") then
+            return "Sheriff"
+        elseif tool.Name:lower():find("knife") or tool.Name:lower():find("blade") then
+            return "Murderer"
+        end
+    end
+    return nil
+end
+
+RunService.Heartbeat:Connect(function()
+    for _, v in pairs(Players:GetPlayers()) do
+        if v ~= LocalPlayer and v.Character then
+            local role = GetPlayerRole(v)
+            local highlight = v.Character:FindFirstChild("RRX_Highlight") or Instance.new("Highlight", v.Character)
+            highlight.Name = "RRX_Highlight"
+            
+            if role == "Sheriff" then
+                highlight.FillColor = Color3.fromRGB(0, 140, 255) -- AZUL
+                highlight.Enabled = true
+            elseif role == "Murderer" then
+                highlight.FillColor = Color3.fromRGB(255, 0, 4) -- ROJO
+                highlight.Enabled = true
+            else
+                highlight.Enabled = States.ESP -- Si no tiene rol, solo se marca si el ESP está ON
+                highlight.FillColor = Color3.fromRGB(255, 255, 255)
+            end
+        end
+    end
+end)
+
+-----------------------------------------------------------
+-- RESTO DE FUNCIONES MANTENIDAS
+-----------------------------------------------------------
+
+CreateToggle("Silent Aim Universal", function(v) States.SilentAim = v end)
+CreateToggle("Líneas 3D (Beam)", function(v) States.Tracers3D = v end)
+CreateToggle("Velocidad Pro (22)", function(v) States.Speed = v and 22 or 16 end)
+CreateToggle("ESP Universal", function(v) States.ESP = v end)
+CreateToggle("Hitbox Grande", function(v) States.HitboxSize = v and 12 or 2 end)
+CreateToggle("Auto Shoot", function(v) States.AimAssist = v end)
+
+-- Bucle de Velocidad
+RunService.Heartbeat:Connect(function()
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.WalkSpeed = States.Speed
+    end
+end)
+
+-- Bucle de Hitbox
+RunService.RenderStepped:Connect(function()
+    for _, v in pairs(Players:GetPlayers()) do
+        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+            v.Character.HumanoidRootPart.Size = Vector3.new(States.HitboxSize, States.HitboxSize, States.HitboxSize)
+            v.Character.HumanoidRootPart.Transparency = States.HitboxSize > 2 and 0.7 or 1
+        end
+    end
+end)
+
+          print("RRX V11 Elite Cargado. Detección de Roles Activa.")
+          
