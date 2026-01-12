@@ -1,0 +1,209 @@
+-- SONYC ELITE V7 - HITBOX EXTREMO (0-100)
+local Player = game.Players.LocalPlayer
+local Mouse = Player:GetMouse()
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+
+local SONYC_SETTINGS = {
+    SpeedActive = false,
+    SpeedValue = 16,
+    EspActive = false,
+    HitboxActive = false,
+    HitboxSize = 2, -- Valor inicial
+    SilentAimActive = false
+}
+
+-- UI PRINCIPAL
+local ScreenGui = Instance.new("ScreenGui", Player.PlayerGui)
+ScreenGui.Name = "SONYC_V7"
+ScreenGui.ResetOnSpawn = false
+
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 280, 0, 430)
+MainFrame.Position = UDim2.new(0.5, -140, 0.2, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 20)
+MainFrame.BackgroundTransparency = 0.1
+MainFrame.Active = true
+MainFrame.Draggable = true
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 15)
+
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Color = Color3.fromRGB(0, 170, 255)
+MainStroke.Thickness = 2.5
+
+-- BARRA DE TÍTULO
+local TitleBar = Instance.new("Frame", MainFrame)
+TitleBar.Size = UDim2.new(1, 0, 0, 45)
+TitleBar.BackgroundTransparency = 1
+
+local TitleText = Instance.new("TextLabel", TitleBar)
+TitleText.Size = UDim2.new(1, -40, 1, 0)
+TitleText.Position = UDim2.new(0, 15, 0, 0)
+TitleText.Text = "SONYC ELITE V7"
+TitleText.Font = Enum.Font.GothamBold
+TitleText.TextColor3 = Color3.new(1, 1, 1)
+TitleText.TextSize = 20
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.BackgroundTransparency = 1
+
+-- BOTÓN MINIMIZAR
+local MinBtn = Instance.new("TextButton", TitleBar)
+MinBtn.Size = UDim2.new(0, 30, 0, 30)
+MinBtn.Position = UDim2.new(1, -35, 0.5, -15)
+MinBtn.Text = "-"
+MinBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+MinBtn.TextColor3 = Color3.new(1, 1, 1)
+MinBtn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 8)
+
+-- CONTENEDOR
+local Container = Instance.new("ScrollingFrame", MainFrame)
+Container.Size = UDim2.new(1, -20, 1, -60)
+Container.Position = UDim2.new(0, 10, 0, 55)
+Container.BackgroundTransparency = 1
+Container.CanvasSize = UDim2.new(0, 0, 1.4, 0)
+Container.ScrollBarThickness = 0
+local Layout = Instance.new("UIListLayout", Container)
+Layout.Padding = UDim.new(0, 12)
+Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+-----------------------------------------------------------
+-- SISTEMA DE MINIMIZAR
+-----------------------------------------------------------
+local isMinimized = false
+MinBtn.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    if isMinimized then
+        Container.Visible = false
+        MainFrame:TweenSize(UDim2.new(0, 280, 0, 45), "Out", "Quart", 0.3, true)
+        MinBtn.Text = "+"
+    else
+        MainFrame:TweenSize(UDim2.new(0, 280, 0, 430), "Out", "Quart", 0.3, true)
+        task.wait(0.2)
+        Container.Visible = true
+        MinBtn.Text = "-"
+    end
+end)
+
+-----------------------------------------------------------
+-- COMPONENTES (BOTONES Y SLIDERS)
+-----------------------------------------------------------
+local function CreateToggle(text, key)
+    local Btn = Instance.new("TextButton", Container)
+    Btn.Size = UDim2.new(0.9, 0, 0, 38)
+    Btn.Text = text .. ": OFF"
+    Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+    Btn.TextColor3 = Color3.new(1, 1, 1)
+    Btn.Font = Enum.Font.GothamMedium
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(1, 0)
+    local St = Instance.new("UIStroke", Btn)
+    St.Color = Color3.fromRGB(255, 50, 50)
+    St.Thickness = 1.5
+
+    Btn.MouseButton1Click:Connect(function()
+        SONYC_SETTINGS[key] = not SONYC_SETTINGS[key]
+        Btn.Text = text .. (SONYC_SETTINGS[key] and ": ON" or ": OFF")
+        Btn.BackgroundColor3 = SONYC_SETTINGS[key] and Color3.fromRGB(20, 60, 100) or Color3.fromRGB(30, 30, 45)
+        St.Color = SONYC_SETTINGS[key] and Color3.fromRGB(0, 255, 120) or Color3.fromRGB(255, 50, 50)
+    end)
+end
+
+local function CreateSlider(text, min, max, key)
+    local Label = Instance.new("TextLabel", Container)
+    Label.Size = UDim2.new(0.9, 0, 0, 15)
+    Label.Text = text .. ": " .. SONYC_SETTINGS[key]
+    Label.TextColor3 = Color3.new(0.8, 0.8, 0.8)
+    Label.BackgroundTransparency = 1
+
+    local SliderBtn = Instance.new("TextButton", Container)
+    SliderBtn.Size = UDim2.new(0.9, 0, 0, 8)
+    SliderBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    SliderBtn.Text = ""
+    Instance.new("UICorner", SliderBtn)
+
+    local Fill = Instance.new("Frame", SliderBtn)
+    Fill.Size = UDim2.new((SONYC_SETTINGS[key]-min)/(max-min), 0, 1, 0)
+    Fill.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    Instance.new("UICorner", Fill)
+
+    SliderBtn.MouseButton1Down:Connect(function()
+        local move
+        move = RunService.RenderStepped:Connect(function()
+            local percent = math.clamp((Mouse.X - SliderBtn.AbsolutePosition.X) / SliderBtn.AbsoluteSize.X, 0, 1)
+            Fill.Size = UDim2.new(percent, 0, 1, 0)
+            local val = math.floor(min + (max - min) * percent)
+            SONYC_SETTINGS[key] = val
+            Label.Text = text .. ": " .. val
+            if not UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then move:Disconnect() end
+        end)
+    end)
+end
+
+-- CREAR INTERFAZ
+CreateToggle("ESP ROLES", "EspActive")
+CreateToggle("SILENT AIM", "SilentAimActive")
+CreateToggle("VELOCIDAD HACK", "SpeedActive")
+CreateSlider("Velocidad", 16, 150, "SpeedValue")
+CreateToggle("HITBOX EXPANDER", "HitboxActive")
+CreateSlider("Hitbox Size", 0, 100, "HitboxSize") -- RANGO MODIFICADO A 100
+
+-----------------------------------------------------------
+-- LÓGICA DE JUEGO
+-----------------------------------------------------------
+RunService.Heartbeat:Connect(function()
+    -- Speed
+    if SONYC_SETTINGS.SpeedActive and Player.Character and Player.Character:FindFirstChild("Humanoid") then
+        Player.Character.Humanoid.WalkSpeed = SONYC_SETTINGS.SpeedValue
+    elseif Player.Character and Player.Character:FindFirstChild("Humanoid") then
+        Player.Character.Humanoid.WalkSpeed = 16
+    end
+
+    -- Hitbox y ESP
+    for _, v in pairs(game.Players:GetPlayers()) do
+        if v ~= Player and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+            -- Hitbox
+            if SONYC_SETTINGS.HitboxActive then
+                v.Character.HumanoidRootPart.Size = Vector3.new(SONYC_SETTINGS.HitboxSize, SONYC_SETTINGS.HitboxSize, SONYC_SETTINGS.HitboxSize)
+                v.Character.HumanoidRootPart.Transparency = 0.7
+                v.Character.HumanoidRootPart.CanCollide = false
+            else
+                v.Character.HumanoidRootPart.Size = Vector3.new(2, 2, 1)
+                v.Character.HumanoidRootPart.Transparency = 1
+            end
+            
+            -- ESP
+            local esp = v.Character:FindFirstChild("Highlight")
+            if SONYC_SETTINGS.EspActive then
+                if not esp then esp = Instance.new("Highlight", v.Character) end
+                if v.Backpack:FindFirstChild("Knife") or v.Character:FindFirstChild("Knife") then
+                    esp.FillColor = Color3.fromRGB(255, 0, 0)
+                elseif v.Backpack:FindFirstChild("Gun") or v.Character:FindFirstChild("Gun") then
+                    esp.FillColor = Color3.fromRGB(0, 100, 255)
+                else
+                    esp.FillColor = Color3.fromRGB(0, 255, 0)
+                end
+            elseif esp then esp:Destroy() end
+        end
+    end
+end)
+
+-- SILENT AIM (METATABLE HOOK)
+local mt = getrawmetatable(game)
+local old = mt.__namecall
+setreadonly(mt, false)
+mt.__namecall = newcclosure(function(self, ...)
+    local method = getnamecallmethod()
+    local args = {...}
+    if SONYC_SETTINGS.SilentAimActive and method == "FireServer" and tostring(self) == "Shoot" then
+        for _, v in pairs(game.Players:GetPlayers()) do
+            if v ~= Player and v.Character and (v.Character:FindFirstChild("Knife") or v.Backpack:FindFirstChild("Knife")) then
+                args[1] = v.Character.HumanoidRootPart.Position
+                return old(self, unpack(args))
+            end
+        end
+    end
+    return old(self, ...)
+end)
+setreadonly(mt, true)
+
+print("SONYC ELITE V7 - HITBOX 0-100 CARGADO")
