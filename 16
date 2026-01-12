@@ -1,0 +1,217 @@
+-- RRX ELITE V16 - RAGE EDITION (BLATANT SILENT AIM)
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local Mouse = LocalPlayer:GetMouse()
+
+local States = {
+	Visible = true,
+	Speed = 16,
+	SilentAim = false,
+	Tracers3D = false,
+	RevealRoles = false,
+	HitboxSize = 2
+}
+
+-- UI SYSTEM
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "RRX_V16_Rage"
+ScreenGui.ResetOnSpawn = false
+pcall(function() ScreenGui.Parent = game:GetService("CoreGui") end)
+if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer.PlayerGui end
+
+local Main = Instance.new("Frame")
+Main.Size = UDim2.new(0, 190, 0, 350)
+Main.Position = UDim2.new(0.5, -95, 0.5, -175)
+Main.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+Main.BorderSizePixel = 0
+Main.Active = true
+Main.Draggable = true 
+Main.ClipsDescendants = true
+Main.Parent = ScreenGui
+
+local Corner = Instance.new("UICorner", Main)
+local Stroke = Instance.new("UIStroke", Main)
+Stroke.Color = Color3.fromRGB(255, 0, 0) -- Rojo Intenso para Rage
+Stroke.Thickness = 2
+Stroke.Parent = Main
+
+-- HEADER
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1, 0, 0, 35)
+Header.BackgroundColor3 = Color3.fromRGB(40, 0, 0)
+Header.Parent = Main
+
+local Title = Instance.new("TextLabel")
+Title.Text = "🐺 RRX V16 RAGE"
+Title.Size = UDim2.new(1, -40, 1, 0)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.TextColor3 = Color3.new(1,1,1)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 14
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.BackgroundTransparency = 1
+Title.Parent = Header
+
+local MinBtn = Instance.new("TextButton")
+MinBtn.Size = UDim2.new(0, 30, 0, 30)
+MinBtn.Position = UDim2.new(1, -35, 0, 2)
+MinBtn.Text = "-"
+MinBtn.TextColor3 = Color3.new(1,1,1)
+MinBtn.BackgroundColor3 = Color3.fromRGB(60, 0, 0)
+MinBtn.Font = Enum.Font.GothamBold
+MinBtn.Parent = Header
+Instance.new("UICorner", MinBtn)
+
+MinBtn.MouseButton1Click:Connect(function()
+	States.Visible = not States.Visible
+	Main:TweenSize(States.Visible and UDim2.new(0, 190, 0, 350) or UDim2.new(0, 190, 0, 35), "Out", "Quart", 0.3, true)
+	MinBtn.Text = States.Visible and "-" or "+"
+end)
+
+local Scroll = Instance.new("ScrollingFrame")
+Scroll.Size = UDim2.new(1, -10, 1, -45)
+Scroll.Position = UDim2.new(0, 5, 0, 40)
+Scroll.BackgroundTransparency = 1
+Scroll.CanvasSize = UDim2.new(0, 0, 1.8, 0)
+Scroll.ScrollBarThickness = 0
+Scroll.Parent = Main
+
+local List = Instance.new("UIListLayout", Scroll)
+List.Padding = UDim.new(0, 5)
+
+local function AddToggle(text, callback)
+	local b = Instance.new("TextButton", Scroll)
+	b.Size = UDim2.new(1, 0, 0, 35)
+	b.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	b.Text = "  " .. text
+	b.TextColor3 = Color3.fromRGB(200, 200, 200)
+	b.Font = Enum.Font.GothamMedium
+	b.TextXAlignment = Enum.TextXAlignment.Left
+	b.TextSize = 12
+	Instance.new("UICorner", b)
+	
+	local active = false
+	b.MouseButton1Click:Connect(function()
+		active = not active
+		b.BackgroundColor3 = active and Color3.fromRGB(200, 0, 0) or Color3.fromRGB(30, 30, 30)
+		b.TextColor3 = active and Color3.new(1,1,1) or Color3.fromRGB(200, 200, 200)
+		callback(active)
+	end)
+end
+
+-----------------------------------------------------------
+-- LÓGICA RAGE (DESCARADA)
+-----------------------------------------------------------
+local TracerFolder = Instance.new("Folder", workspace)
+TracerFolder.Name = "RRX_Rage_Tracers"
+
+local function GetClosestTarget()
+	local target, closest = nil, math.huge
+	for _, p in pairs(Players:GetPlayers()) do
+		if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
+			local pos, onScreen = Camera:WorldToViewportPoint(p.Character.Head.Position)
+			if onScreen then
+				local mag = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
+				if mag < closest then
+					closest = mag
+					target = p
+				end
+			end
+		end
+	end
+	return target
+end
+
+-- HOOK DE SILENT AIM DESCARADO
+local mt = getrawmetatable(game)
+local oldIndex = mt.__index
+setreadonly(mt, false)
+
+mt.__index = newcclosure(function(self, index)
+	if States.SilentAim and self == Mouse and (index == "Hit" or index == "Target") then
+		local target = GetClosestTarget()
+		if target then
+			return (index == "Hit" and target.Character.Head.CFrame or target.Character.Head)
+		end
+	end
+	return oldIndex(self, index)
+end)
+setreadonly(mt, true)
+
+local function GetRoleColor(p)
+	if p.Character then
+		local tool = p.Character:FindFirstChildOfClass("Tool") or p.Backpack:FindFirstChildOfClass("Tool")
+		if tool then
+			local n = tool.Name:lower()
+			if n:find("gun") or n:find("revolver") then return Color3.fromRGB(0, 140, 255)
+			elseif n:find("knife") or n:find("blade") then return Color3.fromRGB(255, 0, 0)
+			end
+		end
+	end
+	return Color3.fromRGB(0, 255, 0)
+end
+
+RunService.RenderStepped:Connect(function()
+	TracerFolder:ClearAllChildren()
+	for _, p in pairs(Players:GetPlayers()) do
+		if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+			local char = p.Character
+			local hrp = char.HumanoidRootPart
+			
+			-- ESP ROLES
+			local high = char:FindFirstChild("RRX_H") or Instance.new("Highlight", char)
+			high.Name = "RRX_H"
+			high.Enabled = States.RevealRoles
+			high.FillColor = GetRoleColor(p)
+
+			-- LÍNEAS 3D BLANCAS (Desde el Pecho)
+			if States.Tracers3D then
+				local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+				if myHRP then
+					local p1 = Instance.new("Part", TracerFolder)
+					p1.Transparency, p1.CanCollide, p1.Anchored = 1, false, true
+					p1.Position = myHRP.Position
+					
+					local p2 = Instance.new("Part", TracerFolder)
+					p2.Transparency, p2.CanCollide, p2.Anchored = 1, false, true
+					p2.Position = hrp.Position
+					
+					local Beam = Instance.new("Beam", p1)
+					Beam.Attachment0 = Instance.new("Attachment", p1)
+					Beam.Attachment1 = Instance.new("Attachment", p2)
+					Beam.Color = ColorSequence.new(Color3.new(1, 1, 1))
+					Beam.Width0, Beam.Width1 = 0.05, 0.05
+					Beam.FaceCamera = true
+				end
+			end
+
+			-- HITBOX TRASPASABLE
+			if States.HitboxSize > 2 then
+				hrp.Size = Vector3.new(States.HitboxSize, States.HitboxSize, States.HitboxSize)
+				hrp.CanCollide = false
+				hrp.Transparency = 0.8
+			else
+				hrp.Size = Vector3.new(2, 2, 1)
+				hrp.CanCollide = true
+			end
+		end
+	end
+end)
+
+-- MENU
+AddToggle("SILENT AIM RAGE", function(v) States.SilentAim = v end)
+AddToggle("Líneas 3D (Blancas)", function(v) States.Tracers3D = v end)
+AddToggle("Revelar Roles (MM2)", function(v) States.RevealRoles = v end)
+AddToggle("Hitbox Gigante", function(v) States.HitboxSize = v and 15 or 2 end)
+AddToggle("Velocidad Pro (22)", function(v) States.Speed = v and 22 or 16 end)
+
+RunService.Heartbeat:Connect(function()
+	if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+		LocalPlayer.Character.Humanoid.WalkSpeed = States.Speed
+	end
+end)
+
+print("RRX V16 RAGE: Silent Aim descarado activo.")
