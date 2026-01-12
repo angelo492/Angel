@@ -1,0 +1,127 @@
+-- SONYC UNIVERSAL HUD - ESTILO NEÓN 3D
+local Player = game.Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+
+-- ScreenGui Principal
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "SONYC_HUD_NEON"
+ScreenGui.Parent = PlayerGui
+ScreenGui.ResetOnSpawn = false
+
+-- Marco Principal (Transparente/Vidrio)
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 260, 0, 320)
+MainFrame.Position = UDim2.new(0.5, -130, 0.4, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+MainFrame.BackgroundTransparency = 0.2 -- Efecto cristal
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+-- Bordes Redondeados
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 15)
+MainCorner.Parent = MainFrame
+
+-- Borde Brillante (Efecto Neón Azul)
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Thickness = 2.5
+UIStroke.Color = Color3.fromRGB(0, 180, 255) -- Azul Neón
+UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+UIStroke.Parent = MainFrame
+
+-- Título SONYC
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 50)
+Title.Text = "SONYC"
+Title.Font = Enum.Font.GothamBold
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.TextSize = 28
+Title.BackgroundTransparency = 1
+Title.Parent = MainFrame
+
+-- Contenedor de Botones (Lista)
+local Container = Instance.new("Frame")
+Container.Size = UDim2.new(1, -20, 1, -60)
+Container.Position = UDim2.new(0, 10, 0, 60)
+Container.BackgroundTransparency = 1
+Container.Parent = MainFrame
+
+local Layout = Instance.new("UIListLayout")
+Layout.Padding = UDim.new(0, 12)
+Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+Layout.Parent = Container
+
+-----------------------------------------------------------
+-- FUNCIÓN PARA CREAR BOTONES TIPO CÁPSULA (Como la imagen)
+-----------------------------------------------------------
+local function CreateButton(name, color)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(0.9, 0, 0, 45)
+    Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    Btn.BackgroundTransparency = 0.3
+    Btn.Text = name
+    Btn.TextColor3 = Color3.new(1, 1, 1)
+    Btn.Font = Enum.Font.GothamMedium
+    Btn.TextSize = 16
+    Btn.Parent = Container
+
+    local BtnCorner = Instance.new("UICorner")
+    BtnCorner.CornerRadius = UDim.new(1, 0) -- Forma de cápsula
+    BtnCorner.Parent = Btn
+    
+    local BtnStroke = Instance.new("UIStroke")
+    BtnStroke.Thickness = 1.5
+    BtnStroke.Color = color
+    BtnStroke.Parent = Btn
+    
+    return Btn
+end
+
+-- Crear los botones
+local InstaKillBtn = CreateButton("MM2: Insta-Kill (OFF)", Color3.fromRGB(200, 50, 50))
+local WalkSpeedBtn = CreateButton("WalkSpeed (Default)", Color3.fromRGB(0, 180, 255))
+local JumpBtn = CreateButton("Infinite Jump (OFF)", Color3.fromRGB(0, 180, 255))
+
+-----------------------------------------------------------
+-- LÓGICA DE FUNCIONES
+-----------------------------------------------------------
+
+-- 1. Insta-Kill MM2
+local mm2Active = false
+InstaKillBtn.MouseButton1Click:Connect(function()
+    mm2Active = not mm2Active
+    if mm2Active then
+        InstaKillBtn.Text = "MM2: Insta-Kill (ON)"
+        InstaKillBtn.UIStroke.Color = Color3.fromRGB(50, 255, 100) -- Verde neón
+    else
+        InstaKillBtn.Text = "MM2: Insta-Kill (OFF)"
+        InstaKillBtn.UIStroke.Color = Color3.fromRGB(255, 50, 50) -- Rojo neón
+    end
+end)
+
+-- 2. WalkSpeed (Ejemplo de función universal)
+local speedLevel = 16
+WalkSpeedBtn.MouseButton1Click:Connect(function()
+    if speedLevel == 16 then speedLevel = 50 else speedLevel = 16 end
+    Player.Character.Humanoid.WalkSpeed = speedLevel
+    WalkSpeedBtn.Text = "WalkSpeed (" .. tostring(speedLevel) .. ")"
+end)
+
+-- 3. Bucle de detección Murderer
+game:GetService("RunService").Heartbeat:Connect(function()
+    if mm2Active and game.PlaceId == 142823291 then
+        local char = Player.Character
+        if char and char:FindFirstChild("Gun") then
+            for _, p in pairs(game.Players:GetPlayers()) do
+                if p ~= Player and p.Character and p.Character:FindFirstChild("Knife") then
+                    -- Lógica de disparo aquí (Requiere el RemoteEvent de MM2)
+                    print("SONYC detectó al Murderer: " .. p.Name)
+                end
+            end
+        end
+    end
+end)
+
+print("SONYC HUD cargado con éxito.")
