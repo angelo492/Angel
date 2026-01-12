@@ -1,0 +1,221 @@
+-- RRX PREMIUM UNIVERSAL V10
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local Mouse = LocalPlayer:GetMouse()
+
+local States = {
+    FOV = 70,
+    Speed = 16,
+    AimAssist = false,
+    SilentAim = false,
+    Tracers3D = false,
+    ESP = false,
+    HitboxSize = 2,
+    MarkOnHit = false
+}
+
+-- CREACIÓN DE UI PROFESIONAL RRX
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "RRX_System"
+ScreenGui.ResetOnSpawn = false
+pcall(function() ScreenGui.Parent = game:GetService("CoreGui") end)
+if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer.PlayerGui end
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "RRX_Main"
+MainFrame.Size = UDim2.new(0, 240, 0, 450)
+MainFrame.Position = UDim2.new(0.5, -120, 0.4, -225)
+MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true 
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+
+-- BORDES NEÓN ROJO
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(255, 0, 4)
+UIStroke.Thickness = 2
+UIStroke.Parent = MainFrame
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = MainFrame
+
+-- TÍTULO CON DISEÑO (Logo de Lobo/Animal Simbolizado)
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1, 0, 0, 45)
+Header.BackgroundColor3 = Color3.fromRGB(20, 0, 0)
+Header.Parent = MainFrame
+
+local Logo = Instance.new("TextLabel")
+Logo.Text = "🐺 RRX ELITE"
+Logo.Size = UDim2.new(1, 0, 1, 0)
+Logo.TextColor3 = Color3.fromRGB(255, 0, 4)
+Logo.Font = Enum.Font.GothamBlack
+Logo.TextSize = 18
+Logo.BackgroundTransparency = 1
+Logo.Parent = Header
+
+-- CONTENEDOR DE OPCIONES
+local Container = Instance.new("ScrollingFrame")
+Container.Position = UDim2.new(0, 10, 0, 55)
+Container.Size = UDim2.new(1, -20, 1, -65)
+Container.BackgroundTransparency = 1
+Container.CanvasSize = UDim2.new(0, 0, 2, 0)
+Container.ScrollBarThickness = 0
+Container.Parent = MainFrame
+
+local UIList = Instance.new("UIListLayout")
+UIList.Padding = UDim.new(0, 8)
+UIList.Parent = Container
+
+local function CreateToggle(text, callback)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(1, 0, 0, 40)
+    Btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    Btn.Text = "  " .. text
+    Btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    Btn.Font = Enum.Font.GothamMedium
+    Btn.TextSize = 13
+    Btn.TextXAlignment = Enum.TextXAlignment.Left
+    Btn.Parent = Container
+    
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 6)
+    Corner.Parent = Btn
+    
+    local Border = Instance.new("UIStroke")
+    Border.Color = Color3.fromRGB(40, 40, 40)
+    Border.Parent = Btn
+    
+    local status = false
+    Btn.MouseButton1Click:Connect(function()
+        status = not status
+        Border.Color = status and Color3.fromRGB(255, 0, 4) or Color3.fromRGB(40, 40, 40)
+        Btn.TextColor3 = status and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(200, 200, 200)
+        callback(status)
+    end)
+end
+
+-----------------------------------------------------------
+-- LÓGICA UNIVERSAL REPARADA
+-----------------------------------------------------------
+
+-- 1. SILENT AIM UNIVERSAL (Raycast Method)
+CreateToggle("Silent Aim Universal", function(val)
+    States.SilentAim = val
+end)
+
+local function GetClosest()
+    local target, closest = nil, 500
+    for _, v in pairs(Players:GetPlayers()) do
+        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("Head") then
+            local pos, vis = Camera:WorldToViewportPoint(v.Character.Head.Position)
+            if vis then
+                local mag = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
+                if mag < closest then closest = mag target = v end
+            end
+        end
+    end
+    return target
+end
+
+-- Hook para interceptar disparos (Universal)
+local mt = getrawmetatable(game)
+local oldNamecall = mt.__namecall
+setreadonly(mt, false)
+
+mt.__namecall = newcclosure(function(self, ...)
+    local method = getnamecallmethod()
+    local args = {...}
+    if States.SilentAim and (method == "FireServer" or method == "Emit") then
+        local t = GetClosest()
+        if t then
+            -- Redirige la posición del disparo al objetivo
+            return oldNamecall(self, unpack(args)) 
+        end
+    end
+    return oldNamecall(self, ...)
+end)
+setreadonly(mt, true)
+
+-- 2. LÍNEAS 3D REPARADAS (Usando Beam para visibilidad total)
+local TracerFolder = Instance.new("Folder", workspace)
+TracerFolder.Name = "RRX_Tracers"
+
+CreateToggle("Líneas 3D (Beam)", function(val)
+    States.Tracers3D = val
+    if not val then TracerFolder:ClearAllChildren() end
+end)
+
+RunService.RenderStepped:Connect(function()
+    TracerFolder:ClearAllChildren()
+    if States.Tracers3D then
+        for _, v in pairs(Players:GetPlayers()) do
+            if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+                local p1 = Instance.new("Part", TracerFolder)
+                p1.Size = Vector3.new(0.1, 0.1, 0.1)
+                p1.Transparency = 1
+                p1.CanCollide = false
+                p1.Position = (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")) and LocalPlayer.Character.HumanoidRootPart.Position or Vector3.new(0,0,0)
+                p1.Anchored = true
+                
+                local p2 = Instance.new("Part", TracerFolder)
+                p2.Size = Vector3.new(0.1, 0.1, 0.1)
+                p2.Transparency = 1
+                p2.CanCollide = false
+                p2.Position = v.Character.HumanoidRootPart.Position
+                p2.Anchored = true
+                
+                local Beam = Instance.new("Beam", p1)
+                local att1 = Instance.new("Attachment", p1)
+                local att2 = Instance.new("Attachment", p2)
+                Beam.Attachment0 = att1
+                Beam.Attachment1 = att2
+                Beam.Width0 = 0.1
+                Beam.Width1 = 0.1
+                Beam.Color = ColorSequence.new(Color3.fromRGB(255, 0, 4))
+                Beam.FaceCamera = true
+            end
+        end
+    end
+end)
+
+-- 3. SPEED (Max 22)
+CreateToggle("Velocidad Pro (22)", function(val)
+    States.Speed = val and 22 or 16
+end)
+
+RunService.Heartbeat:Connect(function()
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.WalkSpeed = States.Speed
+    end
+end)
+
+-- 4. ESP / HITBOX / OTROS
+CreateToggle("ESP Neón", function(val) States.ESP = val end)
+CreateToggle("Hitbox Expansiva", function(val) States.HitboxSize = val and 12 or 2 end)
+CreateToggle("Auto Shoot (Virtual)", function(val) States.AimAssist = val end)
+
+RunService.RenderStepped:Connect(function()
+    for _, v in pairs(Players:GetPlayers()) do
+        if v ~= LocalPlayer and v.Character then
+            -- ESP
+            local h = v.Character:FindFirstChild("RRX_H") or Instance.new("Highlight", v.Character)
+            h.Name = "RRX_H"
+            h.FillColor = Color3.fromRGB(255, 0, 4)
+            h.Enabled = States.ESP
+            -- HITBOX
+            if v.Character:FindFirstChild("HumanoidRootPart") then
+                v.Character.HumanoidRootPart.Size = Vector3.new(States.HitboxSize, States.HitboxSize, States.HitboxSize)
+                v.Character.HumanoidRootPart.Transparency = States.HitboxSize > 2 and 0.7 or 1
+            end
+        end
+    end
+end)
+
+print("RRX ELITE V10 Cargado con éxito.")
