@@ -1,0 +1,140 @@
+-- RTX HUD SYSTEM - V.2 PROFESSIONAL
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+local localPlayer = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+local mainFrame = script.Parent:WaitForChild("MainFrame")
+
+-- ESTADOS DE LAS FUNCIONES
+local states = {
+	Aim = false,
+	Fov = false,
+	Speed = false,
+	Esp = false,
+	Lines = false
+}
+
+-- CONFIGURACIÓN VISUAL RTX
+local RED_RTX = Color3.fromRGB(255, 0, 0)
+local GREEN_ON = Color3.fromRGB(0, 255, 120)
+
+-----------------------------------------------------------
+-- SISTEMA DE ESP Y LINES (LÓGICA DINÁMICA)
+-----------------------------------------------------------
+local function createESP(targetPlayer)
+	local highlight = Instance.new("Highlight")
+	highlight.Name = "RTX_ESP"
+	highlight.FillColor = RED_RTX
+	highlight.FillTransparency = 0.5
+	highlight.OutlineColor = Color3.new(1, 1, 1)
+	highlight.Enabled = false
+	
+	local line = Drawing.new("Line") -- Solo funciona en ejecutores o con simulador de Drawing
+	line.Visible = false
+	line.Color = RED_RTX
+	line.Thickness = 1.5
+
+	RunService.RenderStepped:Connect(function()
+		if targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+			local hrp = targetPlayer.Character.HumanoidRootPart
+			local pos, onScreen = camera:WorldToViewportPoint(hrp.Position)
+			
+			-- Lógica ESP
+			if states.Esp and targetPlayer.Character then
+				if not targetPlayer.Character:FindFirstChild("RTX_ESP") then
+					highlight.Parent = targetPlayer.Character
+				end
+				highlight.Enabled = true
+			else
+				highlight.Enabled = false
+			end
+
+			-- Lógica Lines (Tracers)
+			if states.Lines and onScreen then
+				line.From = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
+				line.To = Vector2.new(pos.X, pos.Y)
+				line.Visible = true
+			else
+				line.Visible = false
+			end
+		else
+			highlight.Enabled = false
+			line.Visible = false
+		end
+	end)
+end
+
+-- Inicializar ESP para todos
+for _, p in pairs(Players:GetPlayers()) do
+	if p ~= localPlayer then createESP(p) end
+end
+Players.PlayerAdded:Connect(createESP)
+
+-----------------------------------------------------------
+-- LÓGICA DE BOTONES
+-----------------------------------------------------------
+
+-- 1. AIMASSIST
+mainFrame.AimBtn.MouseButton1Click:Connect(function()
+	states.Aim = not states.Aim
+	mainFrame.AimBtn.BackgroundColor3 = states.Aim and GREEN_ON or RED_RTX
+end)
+
+-- 2. FOV RTX (120)
+mainFrame.FovBtn.MouseButton1Click:Connect(function()
+	states.Fov = not states.Fov
+	local targetFov = states.Fov and 120 or 70
+	TweenService:Create(camera, TweenInfo.new(0.5), {FieldOfView = targetFov}):Play()
+	mainFrame.FovBtn.BackgroundColor3 = states.Fov and GREEN_ON or RED_RTX
+end)
+
+-- 3. SPEED (Velocidad RTX)
+mainFrame.SpeedBtn.MouseButton1Click:Connect(function()
+	states.Speed = not states.Speed
+	local hum = localPlayer.Character and localPlayer.Character:FindFirstChildOfClass("Humanoid")
+	if hum then
+		hum.WalkSpeed = states.Speed and 100 or 16
+	end
+	mainFrame.SpeedBtn.BackgroundColor3 = states.Speed and GREEN_ON or RED_RTX
+end)
+
+-- 4. ESP (Marcado Rojo)
+mainFrame.EspBtn.MouseButton1Click:Connect(function()
+	states.Esp = not states.Esp
+	mainFrame.EspBtn.BackgroundColor3 = states.Esp and GREEN_ON or RED_RTX
+end)
+
+-- 5. LINES (Tracers)
+mainFrame.LineBtn.MouseButton1Click:Connect(function()
+	states.Lines = not states.Lines
+	mainFrame.LineBtn.BackgroundColor3 = states.Lines and GREEN_ON or RED_RTX
+end)
+
+-----------------------------------------------------------
+-- AIM ASSIST LOOP
+-----------------------------------------------------------
+RunService.RenderStepped:Connect(function()
+	if states.Aim then
+		local closest = nil
+		local dist = math.huge
+		for _, p in pairs(Players:GetPlayers()) do
+			if p ~= localPlayer and p.Character and p.Character:FindFirstChild("Head") then
+				local pos, onScreen = camera:WorldToViewportPoint(p.Character.Head.Position)
+				if onScreen then
+					local m = (Vector2.new(pos.X, pos.Y) - Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)).Magnitude
+					if m < dist then
+						closest = p
+						dist = m
+					end
+				end
+			end
+		end
+		if closest then
+			camera.CFrame = camera.CFrame:Lerp(CFrame.new(camera.CFrame.Position, closest.Character.Head.Position), 0.1)
+		end
+	end
+end)
+
