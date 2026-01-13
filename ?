@@ -1,0 +1,166 @@
+-- SONYC PROJECT V10 - CONTROL TOTAL POR BOTONES
+local Player = game.Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+
+local ProjectConfig = {
+    SpeedActive = false,
+    TargetSpeed = 24,
+    EspActive = false,
+    DesyncActive = false
+}
+
+-- UI PRINCIPAL
+local ScreenGui = Instance.new("ScreenGui", Player.PlayerGui)
+ScreenGui.Name = "Sonyc_Project_V10"
+ScreenGui.ResetOnSpawn = false
+
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 240, 0, 230)
+MainFrame.Position = UDim2.new(0.5, -120, 0.7, -115)
+MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 18)
+MainFrame.Active = true
+MainFrame.Draggable = true
+Instance.new("UICorner", MainFrame)
+
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Color = Color3.fromRGB(255, 0, 255) -- Color Magenta
+MainStroke.Thickness = 2.5
+
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(1, 0, 0, 35)
+Title.Text = "SONYC PROJECT V10"
+Title.Font = Enum.Font.GothamBold
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.TextSize = 14
+Title.BackgroundTransparency = 1
+
+local Container = Instance.new("Frame", MainFrame)
+Container.Size = UDim2.new(1, -20, 1, -45)
+Container.Position = UDim2.new(0, 10, 0, 40)
+Container.BackgroundTransparency = 1
+
+local Layout = Instance.new("UIListLayout", Container)
+Layout.Padding = UDim.new(0, 10)
+Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+-----------------------------------------------------------
+-- FUNCIÓN PARA CREAR BOTONES DE ACTIVAR/DESACTIVAR
+-----------------------------------------------------------
+local function CreateToggleButton(text, configKey)
+    local Btn = Instance.new("TextButton", Container)
+    Btn.Size = UDim2.new(1, 0, 0, 38)
+    Btn.Text = text .. ": OFF"
+    Btn.Font = Enum.Font.GothamBold
+    Btn.TextColor3 = Color3.new(1, 1, 1)
+    Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    Btn.TextSize = 12
+    
+    local Corner = Instance.new("UICorner", Btn)
+    Corner.CornerRadius = UDim.new(0, 8)
+    
+    local Stroke = Instance.new("UIStroke", Btn)
+    Stroke.Thickness = 1.5
+    Stroke.Color = Color3.fromRGB(80, 80, 80)
+
+    Btn.MouseButton1Click:Connect(function()
+        ProjectConfig[configKey] = not ProjectConfig[configKey]
+        
+        if ProjectConfig[configKey] then
+            Btn.Text = text .. ": ON"
+            Btn.BackgroundColor3 = Color3.fromRGB(60, 0, 80) -- Morado oscuro
+            Stroke.Color = Color3.fromRGB(255, 0, 255) -- Magenta neón
+        else
+            Btn.Text = text .. ": OFF"
+            Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+            Stroke.Color = Color3.fromRGB(80, 80, 80)
+        end
+    end)
+    return Btn
+end
+
+-- Input de Velocidad (Número)
+local SpeedInput = Instance.new("TextBox", Container)
+SpeedInput.Size = UDim2.new(1, 0, 0, 35)
+SpeedInput.Text = "24"
+SpeedInput.PlaceholderText = "Velocidad..."
+SpeedInput.Font = Enum.Font.GothamBold
+SpeedInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedInput.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+Instance.new("UICorner", SpeedInput)
+
+-- Crear los botones con su estado independiente
+CreateToggleButton("ACTIVAR SPEED", "SpeedActive")
+CreateToggleButton("ACTIVAR ESP", "EspActive")
+CreateToggleButton("ACTIVAR DESYNC", "DesyncActive")
+
+-----------------------------------------------------------
+-- LÓGICA DE FUNCIONAMIENTO
+-----------------------------------------------------------
+
+-- Actualizar valor de velocidad
+SpeedInput.FocusLost:Connect(function()
+    ProjectConfig.TargetSpeed = tonumber(SpeedInput.Text) or 24
+end)
+
+-- Bucle de Físicas
+RunService.RenderStepped:Connect(function()
+    local char = Player.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChild("Humanoid")
+    
+    if root and hum then
+        -- Lógica Speed
+        if ProjectConfig.SpeedActive and hum.MoveDirection.Magnitude > 0 then
+            root.Velocity = Vector3.new(
+                hum.MoveDirection.X * ProjectConfig.TargetSpeed, 
+                root.Velocity.Y, 
+                hum.MoveDirection.Z * ProjectConfig.TargetSpeed
+            )
+        end
+        
+        -- Lógica Desync (Anti-Hit)
+        if ProjectConfig.DesyncActive then
+            local t = tick() * 20
+            root.CFrame = root.CFrame * CFrame.new(math.cos(t)*0.1, 0, math.sin(t)*0.1)
+        end
+    end
+end)
+
+-- Bucle ESP
+RunService.Heartbeat:Connect(function()
+    for _, v in pairs(game.Players:GetPlayers()) do
+        if v ~= Player and v.Character then
+            local high = v.Character:FindFirstChild("SonycHighlight")
+            if ProjectConfig.EspActive then
+                if not high then
+                    high = Instance.new("Highlight", v.Character)
+                    high.Name = "SonycHighlight"
+                    high.FillColor = Color3.fromRGB(255, 0, 255)
+                    high.OutlineColor = Color3.new(1, 1, 1)
+                end
+            elseif high then 
+                high:Destroy() 
+            end
+        end
+    end
+end)
+
+-- Botón Minimizar
+local MinBtn = Instance.new("TextButton", MainFrame)
+MinBtn.Size = UDim2.new(0, 25, 0, 25)
+MinBtn.Position = UDim2.new(1, -30, 0, 5)
+MinBtn.Text = "-"
+MinBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+MinBtn.TextColor3 = Color3.new(1, 1, 1)
+Instance.new("UICorner", MinBtn)
+
+local isMin = false
+MinBtn.MouseButton1Click:Connect(function()
+    isMin = not isMin
+    Container.Visible = not isMin
+    MainFrame:TweenSize(isMin and UDim2.new(0, 240, 0, 35) or UDim2.new(0, 240, 0, 230), "Out", "Quart", 0.2, true)
+    MinBtn.Text = isMin and "+" or "-"
+end)
+
+print("SONYC V10: Control de Switches Cargado.")
