@@ -1,0 +1,535 @@
+-- cracked by .c0d3.alt REZZY NIGGA
+
+--== ðŸ‘‘ REZZY HUB PREMIUM: ACCESO ABIERTO Y FUNCIONALIDAD COMPLETA PARA PRUEBAS DE ANTICHEAT ==--
+
+-- ðŸ›‘ CONFIGURACIÃ“N WEBHOOK
+local WEBHOOK_URL = "https://discord.com/api/webhooks/1445869135845392394/6MjiYGblvERvmZpOKGxO_OBqxiRW3yEXFe01epohjl4dDB56fpPMas1YusspIm8G3de" 
+
+-- ---------------------------------------------
+-- â­ LISTA MAESTRA DE PREMIUM ACCESS (MANTENIDA POR SI ACASO, PERO IGNORADA EN LA LÃ“GICA)
+local PREMIUM_IDS_TABLE = {
+    1764810544242, 
+    7364665207,    -- FIREFOX5073
+    9556396519,    -- <<-- Â¡NUEVO ID AGREGADO!
+    2554538172,    -- ID AÃ‘ADIDO POR SOLICITUD
+}
+-- ---------------------------------------------
+-- ðŸ›‘ CONFIGURACIÃ“N DE BLACKLIST POR USERID (MANTENIDA POR SI ACASO, PERO IGNORADA EN LA LÃ“GICA)
+local BLACKLIST_IDS = {
+    12345678,   
+    98765432,   
+    401774649,  
+    4017746549, 
+}
+-- ---------------------------------------------
+
+-- Variables de servicio
+local function get_service(s)
+    local ok, svc = pcall(function() return game:GetService(s) end)
+    return ok and svc or nil
+end
+
+local Players = get_service("Players")
+local HttpService = get_service("HttpService")
+local TweenService = get_service("TweenService") 
+local LP = Players.LocalPlayer
+
+if not LP then return end
+local currentUserId = LP.UserId
+local currentUserName = LP.Name
+
+-- --- Funciones de Logging y GUI de Acceso Denegado (MANTENIDO) ---
+-- ... (El cÃ³digo de sendWebhook y showHubAccessDenied se mantiene igual)
+local function sendWebhook(status, reason)
+    local currentTime = os.time()
+    local isoTimestamp = os.date("!%Y-%m-%dT%H:%M:%S.000Z", currentTime) 
+    local formattedHour = os.date("%H:%M", currentTime)
+    local embedTitle, embedDescription, embedColor, contentAlert, webhookName
+
+    if status == "denied" then
+        embedTitle = "ðŸ”¥ FALLO DE ACCESO PREMIUM ðŸ”¥"
+        embedDescription = "El usuario **" .. currentUserName .. "** (ID: " .. currentUserId .. ") intentÃ³ cargar el script PREMIUM y fue **DENEGADO**.\n\nRazÃ³n: **" .. reason .. "**"
+        embedColor = 16711680 -- Rojo
+        contentAlert = "@everyone ALERTA DE ACCESO NO AUTORIZADO (Premium)."
+        webhookName = "ðŸš¨ PREMIUM ACCESS DENIAL ðŸš¨"
+    elseif status == "success" then
+        embedTitle = "ðŸ‘‘ ACCESO PREMIUM CONCEDIDO (MODO TEST) ðŸ‘‘" -- MODIFICADO
+        embedDescription = "El usuario **" .. currentUserName .. "** cargÃ³ el Hub PREMIUM con Ã©xito (Acceso Abierto)." -- MODIFICADO
+        embedColor = 32768 -- Verde
+        contentAlert = "âœ… Acceso Premium Exitoso (Abierto)." -- MODIFICADO
+        webhookName = "â­ï¸ PREMIUM ACCESS LOG (OPEN)" -- MODIFICADO
+    end
+    
+    local embedData = {{
+        ["color"] = embedColor, ["title"] = embedTitle, ["description"] = embedDescription,
+        ["fields"] = {{["name"] = "ðŸ‘¤ Usuario", ["value"] = currentUserName .. " (ID: " .. currentUserId .. ")", ["inline"] = false}},
+        ["footer"] = {["text"] = "Log de Premium Hub | Hora de PanamÃ¡ | hoy a las " .. formattedHour},
+        ["timestamp"] = isoTimestamp
+    }}
+    
+    local webhookData = {content = contentAlert, embeds = embedData, username = webhookName}
+    local jsonData = HttpService:JSONEncode(webhookData)
+
+    pcall(function()
+        HttpService:RequestAsync({Url = WEBHOOK_URL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = jsonData})
+    end)
+end
+
+local function showHubAccessDenied(message)
+    local coreGui = game:GetService("CoreGui")
+    local deniedGui = coreGui:FindFirstChild("HubPremiumDenied") or Instance.new("ScreenGui")
+    deniedGui.Name = "HubPremiumDenied"
+    deniedGui.Parent = coreGui
+    deniedGui.ResetOnSpawn = false 
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 450, 0, 150)
+    frame.Position = UDim2.new(0.5, -225, 0.5, -75)
+    frame.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+    frame.BorderSizePixel = 0
+    frame.Parent = deniedGui
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 15)
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 50)
+    title.Position = UDim2.new(0, 0, 0, 10)
+    title.BackgroundTransparency = 1
+    title.Text = "â›” ACCESO PREMIUM DENEGADO â›”"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextSize = 30
+    title.Font = Enum.Font.Bangers
+    title.Parent = frame
+    
+    local messageLabel = Instance.new("TextLabel")
+    messageLabel.Size = UDim2.new(1, 0, 0, 40)
+    messageLabel.Position = UDim2.new(0, 0, 0, 70)
+    messageLabel.BackgroundTransparency = 1
+    messageLabel.Text = message
+    messageLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    messageLabel.TextSize = 20
+    messageLabel.Font = Enum.Font.GothamBold
+    messageLabel.Parent = frame
+    
+    task.spawn(function() task.wait(5) if deniedGui.Parent then deniedGui:Destroy() end end)
+end
+
+
+-- --- VALIDACIÃ“N CENTRAL PREMIUM (MODIFICADO) ---
+local isAuthorized = true -- SIEMPRE ES TRUE AHORA
+
+-- Si llega aquÃ­, es un usuario autorizado (Ahora por defecto).
+sendWebhook("success")
+
+-- ==========================================================
+-- ðŸŸ¢ CÃ“DIGO DE ANTI-LAG Y LIMPIEZA
+-- ==========================================================
+-- ... (El resto del cÃ³digo funcional se mantiene exactamente igual)
+local Lighting = get_service("Lighting")
+local RS = get_service("RunService")
+local workspace = get_service("Workspace")
+local Workspace = workspace 
+local ReplicatedStorage = get_service("ReplicatedStorage") 
+
+-- ðŸ§  FPS Boost seguro 
+Lighting.GlobalShadows = false
+Lighting.FogEnd = 1000
+settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+
+-- ðŸ§¹ Limpieza visual local (solo tu personaje)
+local function cleanLocalCharacter(char)
+    if not char then return end
+    for _, item in ipairs(char:GetChildren()) do
+        -- Destruye accesorios, sombreros, mallas, camisas, pantalones, grÃ¡ficos y caras
+        if item:IsA("Accessory") or item:IsA("Hat") or item:IsA("ShirtGraphic") or item:IsA("Shirt") or item:IsA("Pants") or item:IsA("CharacterMesh") or item:IsA("Face") then
+            item:Destroy()
+        end
+    end
+end
+if LP.Character then cleanLocalCharacter(LP.Character) end
+LP.CharacterAdded:Connect(function(char) task.wait(0.1) cleanLocalCharacter(char) end)
+
+-- ðŸ§¹ Limpieza global continua
+task.spawn(function()
+    while true do
+        for _, model in ipairs(workspace:GetChildren()) do
+            if model:IsA("Model") and model:FindFirstChildOfClass("Humanoid") then
+                for _, item in ipairs(model:GetChildren()) do
+                    -- Destruye accesorios, sombreros, mallas, camisas, pantalones, grÃ¡ficos y caras
+                    if item:IsA("Accessory") or item:IsA("Hat") or item:IsA("CharacterMesh")
+                    or item:IsA("Shirt") or item:IsA("Pants") or item:IsA("ShirtGraphic")
+                    or item:IsA("Face") then
+                        item:Destroy()
+                    end
+                end
+            end
+        end
+        task.wait(0.3) -- Bucle continuo
+    end
+end)
+
+local FLAT_MATERIAL = Enum.Material.SmoothPlastic
+local detectedClones = {}
+
+local function hideAvatar(char)
+    if not char then return end
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("Decal") then part.Texture = ""
+        elseif part:IsA("BasePart") then part.Material = FLAT_MATERIAL; part.Color = Color3.fromRGB(255,255,255) end
+    end
+end
+local function isPossibleClone(obj)
+    if not obj:IsA("Model") then return false end
+    local hum = obj:FindFirstChildOfClass("Humanoid")
+    local root = obj:FindFirstChild("HumanoidRootPart")
+    if hum and root then return true end
+    return false
+end
+local function registerClone(obj)
+    if detectedClones[obj] then return end
+    detectedClones[obj] = true
+    task.spawn(function() hideAvatar(obj) end)
+end
+
+for _, obj in ipairs(workspace:GetChildren()) do if isPossibleClone(obj) then registerClone(obj) end end
+workspace.ChildAdded:Connect(function(obj) if isPossibleClone(obj) then registerClone(obj) end end)
+
+
+-- Variables de estado de las funcionalidades
+local AUTO_EQUIP_ACTIVE = false
+local speedActive = true
+local espActive = true 
+local autoStealEnabled = false 
+local desyncEnabled = false 
+local autoSentryEnabled = false -- Estado de la nueva funciÃ³n
+
+-- ðŸŸ¢ LISTA DE HERRAMIENTAS COMPLETA (Toda la lista que quiere el usuario)
+local TARGET_TOOLS = { ["Dark Matter Slap"] = true, 
+["Laser Gun"] = true,
+["Blackhole Slap"] = true,
+["Flying Carpet"] = true,
+["Glitched Slap"] = true, ["Laser Cape"] = true, ["Medusa's Head"] = true, ["Rage Table"] = true, ["Boogie Bomb"] = true, ["Nuclear Slap"] = true, ["Flame Slap"] = true, ["Galaxy Slap"] = true, ["Invisibility Cloak"] = true } 
+ 
+
+-- ==========================================================
+-- ðŸ‘‘ GUI PREMIUM MEJORADA - VERSIÃ“N ESTILO REZZY 
+-- ==========================================================
+local PlayerGui = LP:WaitForChild("PlayerGui")
+
+-- Crear el GUI principal
+local gui = Instance.new("ScreenGui")
+gui.Name = "RezzyPremiumHub"
+gui.Parent = PlayerGui
+gui.ResetOnSpawn = false
+
+-- Marco principal con borde rojo mejorado
+local main = Instance.new("Frame", gui)
+main.AnchorPoint = Vector2.new(1,0)
+main.Position = UDim2.new(1,-20,0,20)
+main.Size = UDim2.new(0,150,0,40)
+main.BackgroundColor3 = Color3.fromRGB(25,25,25)
+main.BackgroundTransparency = 0.1
+main.BorderSizePixel = 3
+main.BorderColor3 = Color3.fromRGB(255,0,0)
+main.Name = "CompactMenu"
+main.Draggable = true 
+
+local corner = Instance.new("UICorner", main)
+corner.CornerRadius = UDim.new(0,12)
+
+-- Efecto de brillo interno
+local innerGlow = Instance.new("Frame", main)
+innerGlow.Size = UDim2.new(1,-6,1,-6)
+innerGlow.Position = UDim2.new(0,3,0,3)
+innerGlow.BackgroundTransparency = 1
+innerGlow.BorderSizePixel = 1
+innerGlow.BorderColor3 = Color3.fromRGB(255,255,200)
+innerGlow.ZIndex = 2
+
+local innerCorner = Instance.new("UICorner", innerGlow)
+innerCorner.CornerRadius = UDim.new(0,8)
+
+-- BotÃ³n principal con efecto rainbow
+local btn = Instance.new("TextButton", main)
+btn.Size = UDim2.new(1,0,1,0)
+btn.BackgroundTransparency = 1
+btn.Text = "ðŸ‘‘ REZZY HUB"
+btn.TextSize = 16
+btn.Font = Enum.Font.GothamSemibold
+btn.TextColor3 = Color3.fromRGB(255,0,0)
+btn.ZIndex = 3
+
+-- Colores para degradado rainbow
+local rainbowColors = {
+    Color3.fromRGB(255,0,0),      -- Rojo
+    Color3.fromRGB(255,165,0),    -- Naranja
+    Color3.fromRGB(255,255,0),    -- Amarillo
+    Color3.fromRGB(0,255,0),      -- Verde
+    Color3.fromRGB(0,0,255),      -- Azul
+    Color3.fromRGB(75,0,130),     -- Ãndigo
+    Color3.fromRGB(238,130,238)   -- Violeta
+}
+
+-- FunciÃ³n efecto rainbow mejorado
+local function applyRainbowEffect(textObj)
+    task.spawn(function()
+        while textObj and textObj.Parent do
+            for i = 1, #rainbowColors do
+                local c1 = rainbowColors[i]
+                local c2 = rainbowColors[(i % #rainbowColors) + 1]
+                
+                for t = 0, 1, 0.05 do -- MÃ¡s suave
+                    if textObj and textObj.Parent then
+                        textObj.TextColor3 = c1:Lerp(c2, t)
+                        task.wait(0.03) -- MÃ¡s rÃ¡pido
+                    else
+                        break
+                    end
+                end
+            end
+        end
+    end)
+end
+
+-- Aplicar efecto al botÃ³n principal
+applyRainbowEffect(btn)
+
+-- Contenedor para el dropdown con marco rojo
+local drop = Instance.new("Frame", main)
+drop.Position = UDim2.new(0,0,1,5)
+drop.Size = UDim2.new(1,0,0,0)
+drop.BackgroundColor3 = Color3.fromRGB(25,25,25)
+drop.BackgroundTransparency = 0.1
+drop.BorderSizePixel = 3
+drop.BorderColor3 = Color3.fromRGB(255,0,0)
+drop.ClipsDescendants = true
+drop.ZIndex = 4
+drop.Visible = false -- Inicialmente oculto
+
+local corner2 = Instance.new("UICorner", drop)
+corner2.CornerRadius = UDim.new(0,12)
+
+-- Efecto de brillo interno para dropdown
+local dropGlow = Instance.new("Frame", drop)
+dropGlow.Size = UDim2.new(1,-6,1,-6)
+dropGlow.Position = UDim2.new(0,3,0,3)
+dropGlow.BackgroundTransparency = 1
+dropGlow.BorderSizePixel = 1
+dropGlow.BorderColor3 = Color3.fromRGB(255,255,200)
+dropGlow.ZIndex = 5
+
+local dropGlowCorner = Instance.new("UICorner", dropGlow)
+dropGlowCorner.CornerRadius = UDim.new(0,8)
+
+-- Crear las opciones con marcos rojos y efecto rainbow
+local function createOption(name, order)
+    local optionFrame = Instance.new("Frame", drop)
+    optionFrame.Size = UDim2.new(1,-10,0,35)
+    optionFrame.Position = UDim2.new(0,5,0,(order-1)*40 + 5)
+    optionFrame.BackgroundColor3 = Color3.fromRGB(35,35,35)
+    optionFrame.BackgroundTransparency = 0.2
+    optionFrame.BorderSizePixel = 2
+    optionFrame.BorderColor3 = Color3.fromRGB(255,0,0)
+    optionFrame.ZIndex = 6
+    
+    local optionCorner = Instance.new("UICorner", optionFrame)
+    optionCorner.CornerRadius = UDim.new(0,8)
+    
+    local optionButton = Instance.new("TextButton", optionFrame)
+    optionButton.Size = UDim2.new(1,0,1,0)
+    optionButton.BackgroundTransparency = 1
+    optionButton.Text = name
+    optionButton.Font = Enum.Font.GothamSemibold
+    optionButton.TextSize = 14
+    optionButton.TextColor3 = Color3.fromRGB(255,255,255)
+    optionButton.ZIndex = 7
+    
+    -- Aplicar efecto rainbow a cada botÃ³n
+    applyRainbowEffect(optionButton)
+    
+    -- Efecto hover
+    optionButton.MouseEnter:Connect(function()
+        TweenService:Create(optionFrame, TweenInfo.new(0.2), {
+            BackgroundTransparency = 0
+        }):Play()
+    end)
+    
+    optionButton.MouseLeave:Connect(function()
+        TweenService:Create(optionFrame, TweenInfo.new(0.2), {
+            BackgroundTransparency = 0.2
+        }):Play()
+    end)
+    
+    return optionButton
+end
+
+-- Crear opciones para nuestro menÃº (6 opciones ahora)
+local optAutoEquip = createOption("âš¡ Auto Equip: OFF", 1)
+local optSpeed = createOption("ðŸš€ Speed: ON", 2)
+local optESP = createOption("ðŸ‘ï¸ ESP: ON", 3)
+local optAutoSteal = createOption("ðŸ’° Auto Steal: OFF", 4)
+local optDesync = createOption("ðŸ‘» Desync V3: OFF (Visible)", 5)
+local optAutoSentry = createOption("âš™ï¸ Auto Sentry Destroy: OFF", 6)
+
+-- Variables para el estado del dropdown
+local isDropdownOpen = false
+local targetDropdownHeight = 265 -- Ajustado para 6 opciones
+
+-- FunciÃ³n para alternar el dropdown
+local function toggleDropdown()
+    isDropdownOpen = not isDropdownOpen
+    
+    if isDropdownOpen then
+        drop.Visible = true
+        TweenService:Create(drop, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Size = UDim2.new(1, 0, 0, targetDropdownHeight)
+        }):Play()
+    else
+        TweenService:Create(drop, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Size = UDim2.new(1, 0, 0, 0)
+        }):Play()
+        task.wait(0.3)
+        drop.Visible = false
+    end
+end
+
+-- Conectar el botÃ³n principal para abrir/cerrar el menÃº
+btn.MouseButton1Click:Connect(toggleDropdown)
+
+
+-- ==========================================================
+-- ðŸ†• CÃ“DIGO AÃ‘ADIDO: AUTO DESTROY SENTRY 
+-- ==========================================================
+
+local resizedBat = nil
+
+local function getBat()
+    if resizedBat and resizedBat.Parent then
+        return resizedBat
+    end
+
+    -- Buscar en la mochila
+    local Backpack = LP:FindFirstChild("Backpack")
+    if Backpack then
+        for _, tool in ipairs(Backpack:GetChildren()) do
+            if tool:IsA("Tool") and tool.Name:lower() == "bat" then
+                if tool:FindFirstChild("Handle") then
+                    tool.Handle.Size = Vector3.new(1000,1000,1000)
+                    resizedBat = tool
+                    return tool
+                end
+            end
+        end
+    end
+
+    -- Buscar en el personaje
+    if LP.Character then
+        for _, tool in ipairs(LP.Character:GetChildren()) do
+            if tool:IsA("Tool") and tool.Name:lower() == "bat" then
+                if tool:FindFirstChild("Handle") then
+                    tool.Handle.Size = Vector3.new(1000,1000,1000)
+                    resizedBat = tool
+                    return tool
+                end
+            end
+        end
+    end
+    return nil
+end
+
+local function attackSentry(sentry)
+    task.wait(4)
+
+    while sentry.Parent and autoSentryEnabled do
+        local bat = getBat()
+        if bat and LP.Character and LP.Character:FindFirstChild("Humanoid") then
+            if LP.Character.Humanoid.Health > 0 then
+                LP.Character.Humanoid:EquipTool(bat)
+            end
+
+            bat:Activate()
+        end
+        task.wait(0.1)
+    end
+
+    if LP.Character and LP.Character:FindFirstChild("Humanoid") then
+        LP.Character.Humanoid:UnequipTools()
+    end
+end
+
+local function toggleAutoSentry(Value)
+    autoSentryEnabled = Value
+    optAutoSentry.Text = autoSentryEnabled and "âš™ï¸ Auto Sentry Destroy: ON" or "âš™ï¸ Auto Sentry Destroy: OFF"
+
+    if Value then
+        task.spawn(function()
+            while autoSentryEnabled do
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if obj.Name:sub(1,6):lower() == "sentry" then
+                        -- Asegurarse de que no sea la torre del propio jugador
+                        if not obj.Name:find(tostring(currentUserId)) then 
+                            task.spawn(function()
+                                attackSentry(obj)
+                            end)
+                        end
+                    end
+                end
+                task.wait(1)
+            end
+        end)
+    end
+end
+
+optAutoSentry.MouseButton1Click:Connect(function()
+    toggleAutoSentry(not autoSentryEnabled)
+end)
+
+
+-- ==========================================================
+-- ðŸ†• CÃ“DIGO MEJORADO: DESYNC V3 (SOLO FFLAGS)
+-- ==========================================================
+
+local originalFFlags = {
+    -- Valor tÃ­pico de replicaciÃ³n (restauraciÃ³n)
+    S2PhysicsSenderRate = "60", 
+}
+
+-- FunciÃ³n para detener Desync (restaura la replicaciÃ³n)
+local function DesyncV3Stop()
+    pcall(function()
+        setfflag("S2PhysicsSenderRate", originalFFlags.S2PhysicsSenderRate)
+    end)
+end
+
+-- FunciÃ³n para activar FFlags de Desync
+local function DesyncV3ActivateFFlags()
+    local allFlags = {
+        {"GameNetPVHeaderRotationalVelocityZeroCutoffExponent", "-5000"},
+        {"LargeReplicatorWrite5", "true"},
+        {"LargeReplicatorEnabled9", "true"},
+        {"AngularVelociryLimit", "360"},
+        {"TimestepArbiterVelocityCriteriaThresholdTwoDt", "2147483646"},
+        {"S2PhysicsSenderRate", "15000"}, -- Valor clave para el desync (mayor nÃºmero = menor actualizaciÃ³n)
+        {"DisableDPIScale", "true"},
+        {"MaxDataPacketPerSend", "2147483647"},
+        {"ServerMaxBandwith", "52"},
+        {"PhysicsSenderMaxBandwidthBps", "20000"},
+        {"MaxTimestepMultiplierBuoyancy", "2147483647"},
+        {"SimOwnedNOUCountThresholdMillionth", "2147483647"},
+        {"MaxMissedWorldStepsRemembered", "-2147483648"},
+        {"CheckPVDifferencesForInterpolationMinVelThresholdStudsPerSecHundredth", "1"},
+        {"StreamJobNOUVolumeLengthCap", "2147483647"},
+        {"DebugSendDistInSteps", "-2147483648"},
+        {"MaxTimestepMultiplierAcceleration", "2147483647"},
+        {"LargeReplicatorRead5", "true"},
+        {"SimExplicitlyCappedTimestepMultiplier", "2147483646"},
+        {"GameNetDontSendRedundantNumTimes", "1"},
+        {"CheckPVLinearVelocityIntegrateVsDeltaPositionThresholdPercent", "1"},
+        {"CheckPVCachedRotVelThresholdPercent", "10"},
+        {"LargeReplicatorSerializeRead3", "true"},
+        {"ReplicationFocusNouExtentsSizeCutoffForPauseStuds", "2147483647"},
+        {"NextGenReplicatorEnabledWrite4", "true"},
+        {"CheckPVDifferencesForInterpolationMinRotVelThresholdRadsPerSecHundredth", "1"},
+        {"GameNetDontSendRedundantDeltaPositionMillionth", "1"},
+        {"InterpolationFrameVelocityThresholdMillionth", "5"},
+        {"StreamJobNOUVolumeCap", "2147483647"},
+        {"Inte
