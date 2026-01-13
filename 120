@@ -1,0 +1,94 @@
+-- == DESYNC V3 PARA DELTA (MOBILE) == --
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LP = Players.LocalPlayer
+
+local desyncEnabled = false
+
+-- Función de Desync (Usando los valores de tu script)
+local function ToggleDesync(state)
+    desyncEnabled = state
+    
+    if desyncEnabled then
+        -- Intentar aplicar FFlags (Solo si Delta lo permite en esta versión)
+        pcall(function()
+            setfflag("S2PhysicsSenderRate", "15000")
+            setfflag("GameNetPVHeaderRotationalVelocityZeroCutoffExponent", "-5000")
+            setfflag("PhysicsSenderMaxBandwidthBps", "20000")
+            setfflag("MaxDataPacketPerSend", "2147483647")
+        end)
+        
+        -- Bypass de posición para móviles (Simula el Desync visualmente)
+        task.spawn(function()
+            while desyncEnabled do
+                local char = LP.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    -- Esto hace que para el servidor tu posición esté "saltando"
+                    -- pero tú te mueves normal en tu pantalla.
+                    local oldVel = hrp.Velocity
+                    hrp.Velocity = oldVel * 1000 + Vector3.new(0, 50, 0)
+                    RunService.RenderStepped:Wait()
+                    hrp.Velocity = oldVel
+                end
+                task.wait(0.1)
+            end
+        end)
+    else
+        pcall(function()
+            setfflag("S2PhysicsSenderRate", "60")
+        end)
+    end
+end
+
+-- ==========================================================
+-- INTERFAZ ESTILO REZZY (OPTIMIZADA PARA MÓVIL/DELTA)
+-- ==========================================================
+local screenGui = Instance.new("ScreenGui", LP:WaitForChild("PlayerGui"))
+screenGui.Name = "DeltaDesyncHub"
+
+local main = Instance.new("Frame", screenGui)
+main.Size = UDim2.new(0, 160, 0, 50)
+main.Position = UDim2.new(0.1, 0, 0.4, 0) -- Posición cómoda para pulgares
+main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+main.BorderSizePixel = 2
+main.BorderColor3 = Color3.fromRGB(255, 0, 0)
+main.Active = true
+main.Draggable = true -- Delta permite arrastrar marcos
+
+local corner = Instance.new("UICorner", main)
+corner.CornerRadius = UDim.new(0, 12)
+
+local btn = Instance.new("TextButton", main)
+btn.Size = UDim2.new(1, 0, 1, 0)
+btn.BackgroundTransparency = 1
+btn.Text = "DESYNC V3: OFF"
+btn.Font = Enum.Font.GothamBold
+btn.TextSize = 14
+btn.TextColor3 = Color3.fromRGB(255, 0, 0)
+
+-- Efecto Rainbow (del script original)
+task.spawn(function()
+    while true do
+        for i = 0, 1, 0.05 do
+            if btn then
+                btn.TextColor3 = Color3.fromHSV(i, 1, 1)
+            end
+            task.wait(0.05)
+        end
+    end
+end)
+
+-- Lógica del botón para Delta
+btn.MouseButton1Click:Connect(function()
+    desyncEnabled = not desyncEnabled
+    ToggleDesync(desyncEnabled)
+    
+    if desyncEnabled then
+        btn.Text = "DESYNC V3: ON"
+        main.BorderColor3 = Color3.fromRGB(0, 255, 0)
+    else
+        btn.Text = "DESYNC V3: OFF"
+        main.BorderColor3 = Color3.fromRGB(255, 0, 0)
+    end
+end)
