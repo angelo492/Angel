@@ -1,0 +1,90 @@
+-- SONYC SPEED PROJECT V4 (BYPASS EDITION)
+local Player = game.Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+
+local ProjectConfig = {
+    Active = false,
+    SpeedMulti = 0.5 -- Esto se suma a tu movimiento para ir más rápido
+}
+
+-- Crear Interfaz
+local ScreenGui = Instance.new("ScreenGui", Player.PlayerGui)
+ScreenGui.Name = "Sonyc_SpeedBypass"
+ScreenGui.ResetOnSpawn = false
+
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 240, 0, 140)
+MainFrame.Position = UDim2.new(0.5, -120, 0.8, -50)
+MainFrame.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
+MainFrame.Active = true
+MainFrame.Draggable = true
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Color = Color3.fromRGB(0, 255, 255)
+MainStroke.Thickness = 2
+
+-- Controles de la UI
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(1, 0, 0, 35)
+Title.Text = "SONYC BYPASS SPEED"
+Title.Font = Enum.Font.GothamBold
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.TextSize = 13
+Title.BackgroundTransparency = 1
+
+local SpeedInput = Instance.new("TextBox", MainFrame)
+SpeedInput.Size = UDim2.new(0, 100, 0, 35)
+SpeedInput.Position = UDim2.new(0.5, -50, 0.35, 0)
+SpeedInput.BackgroundColor3 = Color3.fromRGB(25, 30, 45)
+SpeedInput.Text = "24" -- Número visual
+SpeedInput.Font = Enum.Font.GothamBold
+SpeedInput.TextColor3 = Color3.fromRGB(0, 255, 255)
+SpeedInput.TextSize = 22
+Instance.new("UICorner", SpeedInput)
+
+local ToggleBtn = Instance.new("TextButton", MainFrame)
+ToggleBtn.Size = UDim2.new(0.9, 0, 0, 35)
+ToggleBtn.Position = UDim2.new(0.05, 0, 0.7, 0)
+ToggleBtn.Text = "BYPASS: DESACTIVADO"
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 50, 65)
+ToggleBtn.TextColor3 = Color3.new(1, 1, 1)
+Instance.new("UICorner", ToggleBtn)
+
+-----------------------------------------------------------
+-- LÓGICA DE MOVIMIENTO POR CFRAME (INDETECTABLE)
+-----------------------------------------------------------
+
+SpeedInput.FocusLost:Connect(function()
+    local val = tonumber(SpeedInput.Text)
+    if val then
+        -- Convertimos el número de velocidad a un multiplicador de empuje
+        ProjectConfig.SpeedMulti = (val - 16) / 50 
+    else
+        SpeedInput.Text = "24"
+    end
+end)
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    ProjectConfig.Active = not ProjectConfig.Active
+    ToggleBtn.Text = ProjectConfig.Active and "BYPASS: ACTIVADO" or "BYPASS: DESACTIVADO"
+    ToggleBtn.BackgroundColor3 = ProjectConfig.Active and Color3.fromRGB(0, 100, 200) or Color3.fromRGB(45, 50, 65)
+    MainStroke.Color = ProjectConfig.Active and Color3.fromRGB(0, 255, 120) or Color3.fromRGB(0, 255, 255)
+end)
+
+-- Este es el truco: Mover el CFrame en lugar de cambiar el WalkSpeed
+RunService.RenderStepped:Connect(function()
+    if ProjectConfig.Active then
+        local char = Player.Character
+        local hum = char and char:FindFirstChild("Humanoid")
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        
+        if hum and root and hum.MoveDirection.Magnitude > 0 then
+            -- "Teletransportamos" al jugador micro-distancias hacia adelante muy rápido
+            root.CFrame = root.CFrame + (hum.MoveDirection * ProjectConfig.SpeedMulti)
+        end
+    end
+end)
+
+print("SONYC SPEED V4: Bypass Mode Loaded.")
