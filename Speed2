@@ -1,0 +1,141 @@
+-- SONYC SPEED PROJECT V3 (ANTI-REGEN / ANTI-RESTART)
+local Player = game.Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+
+-- Configuración del Proyecto
+local ProjectConfig = {
+    Active = false,
+    Speed = 24
+}
+
+-- Crear Interfaz
+local ScreenGui = Instance.new("ScreenGui", Player.PlayerGui)
+ScreenGui.Name = "Sonyc_SpeedFix"
+ScreenGui.ResetOnSpawn = false -- Importante para que el HUD no desaparezca al morir
+
+-- Marco Principal
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 240, 0, 140)
+MainFrame.Position = UDim2.new(0.5, -120, 0.8, -50)
+MainFrame.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+local UICorner = Instance.new("UICorner", MainFrame)
+UICorner.CornerRadius = UDim.new(0, 10)
+
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Color = Color3.fromRGB(0, 255, 255)
+MainStroke.Thickness = 2
+
+-- Barra de Título
+local Header = Instance.new("Frame", MainFrame)
+Header.Size = UDim2.new(1, 0, 0, 35)
+Header.BackgroundTransparency = 1
+
+local Title = Instance.new("TextLabel", Header)
+Title.Size = UDim2.new(1, -40, 1, 0)
+Title.Position = UDim2.new(0, 12, 0, 0)
+Title.Text = "SONYC SPEED FIX"
+Title.Font = Enum.Font.GothamBold
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.TextSize = 13
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.BackgroundTransparency = 1
+
+-- Botón Minimizar
+local MinBtn = Instance.new("TextButton", Header)
+MinBtn.Size = UDim2.new(0, 25, 0, 25)
+MinBtn.Position = UDim2.new(1, -30, 0, 5)
+MinBtn.Text = "-"
+MinBtn.BackgroundColor3 = Color3.fromRGB(30, 35, 50)
+MinBtn.TextColor3 = Color3.new(1, 1, 1)
+Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 5)
+
+-- Contenido
+local Content = Instance.new("Frame", MainFrame)
+Content.Size = UDim2.new(1, 0, 1, -35)
+Content.Position = UDim2.new(0, 0, 0, 35)
+Content.BackgroundTransparency = 1
+
+-- Cuadro de Texto para el número
+local SpeedInput = Instance.new("TextBox", Content)
+SpeedInput.Size = UDim2.new(0, 100, 0, 35)
+SpeedInput.Position = UDim2.new(0.5, -50, 0.3, 0)
+SpeedInput.BackgroundColor3 = Color3.fromRGB(25, 30, 45)
+SpeedInput.Text = tostring(ProjectConfig.Speed)
+SpeedInput.Font = Enum.Font.GothamBold
+SpeedInput.TextColor3 = Color3.fromRGB(0, 255, 255)
+SpeedInput.TextSize = 22
+SpeedInput.ClearTextOnFocus = true
+Instance.new("UICorner", SpeedInput)
+
+-- Botón Toggle
+local ToggleBtn = Instance.new("TextButton", Content)
+ToggleBtn.Size = UDim2.new(0.9, 0, 0, 35)
+ToggleBtn.Position = UDim2.new(0.05, 0, 0.7, 0)
+ToggleBtn.Text = "ESTADO: DESACTIVADO"
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 50, 65)
+ToggleBtn.TextColor3 = Color3.new(1, 1, 1)
+Instance.new("UICorner", ToggleBtn)
+
+-----------------------------------------------------------
+-- FUNCIONES CORREGIDAS
+-----------------------------------------------------------
+
+-- Actualizar valor de velocidad
+SpeedInput.FocusLost:Connect(function()
+    local val = tonumber(SpeedInput.Text)
+    if val then
+        ProjectConfig.Speed = val
+    else
+        SpeedInput.Text = tostring(ProjectConfig.Speed)
+    end
+end)
+
+-- Activar/Desactivar
+ToggleBtn.MouseButton1Click:Connect(function()
+    ProjectConfig.Active = not ProjectConfig.Active
+    if ProjectConfig.Active then
+        ToggleBtn.Text = "ESTADO: ACTIVADO"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
+        MainStroke.Color = Color3.fromRGB(0, 255, 120)
+    else
+        ToggleBtn.Text = "ESTADO: DESACTIVADO"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 50, 65)
+        MainStroke.Color = Color3.fromRGB(0, 255, 255)
+        
+        -- Resetear velocidad al apagar para evitar tirones
+        if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+            Player.Character.Humanoid.WalkSpeed = 16
+        end
+    end
+end)
+
+-- BUCLE DE ALTA PRIORIDAD (Evita el reinicio del personaje)
+RunService.Stepped:Connect(function()
+    if ProjectConfig.Active then
+        local char = Player.Character
+        if char then
+            local hum = char:FindFirstChild("Humanoid")
+            if hum then
+                -- Aplicamos la velocidad usando Stepped para que el motor
+                -- lo acepte sin detectar una anomalía de reinicio.
+                hum.WalkSpeed = ProjectConfig.Speed
+            end
+        end
+    end
+end)
+
+-- Minimizar
+local min = false
+MinBtn.MouseButton1Click:Connect(function()
+    min = not min
+    Content.Visible = not min
+    MainFrame:TweenSize(min and UDim2.new(0, 240, 0, 35) or UDim2.new(0, 240, 0, 140), "Out", "Quart", 0.2, true)
+    MinBtn.Text = min and "+" or "-"
+end)
+
+print("SONYC SPEED PROJECT: Anti-Reset Fix Loaded.")
