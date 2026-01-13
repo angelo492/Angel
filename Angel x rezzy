@@ -1,0 +1,78 @@
+-- == DESYNC V3 STANDALONE HUD == --
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local LP = Players.LocalPlayer
+
+-- Configuración de Desync
+local desyncEnabled = false
+local originalFFlags = { S2PhysicsSenderRate = "60" }
+
+-- Función para aplicar Desync (Manipulación de FFlags)
+local function ToggleDesync(state)
+    desyncEnabled = state
+    if desyncEnabled then
+        -- Valores extremos para romper la sincronización de posición
+        pcall(function()
+            setfflag("S2PhysicsSenderRate", "15000")
+            setfflag("GameNetPVHeaderRotationalVelocityZeroCutoffExponent", "-5000")
+            setfflag("PhysicsSenderMaxBandwidthBps", "20000")
+            setfflag("CheckPVDifferencesForInterpolationMinVelThresholdStudsPerSecHundredth", "1")
+        end)
+    else
+        -- Restaurar valores normales
+        pcall(function()
+            setfflag("S2PhysicsSenderRate", originalFFlags.S2PhysicsSenderRate)
+        end)
+    end
+end
+
+-- ==========================================================
+-- GUI INTERFACE (REZ STYLE)
+-- ==========================================================
+local screenGui = Instance.new("ScreenGui", LP:WaitForChild("PlayerGui"))
+screenGui.Name = "DesyncOnlyHub"
+
+local main = Instance.new("Frame", screenGui)
+main.Size = UDim2.new(0, 180, 0, 50)
+main.Position = UDim2.new(0.5, -90, 0.1, 0)
+main.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+main.BorderSizePixel = 3
+main.BorderColor3 = Color3.fromRGB(255, 0, 0)
+main.Active = true
+main.Draggable = true
+
+local corner = Instance.new("UICorner", main)
+corner.CornerRadius = UDim.new(0, 10)
+
+local btn = Instance.new("TextButton", main)
+btn.Size = UDim2.new(1, -10, 1, -10)
+btn.Position = UDim2.new(0, 5, 0, 5)
+btn.BackgroundTransparency = 1
+btn.Text = "DESYNC: OFF"
+btn.Font = Enum.Font.GothamBold
+btn.TextSize = 14
+btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+-- Efecto Rainbow para el texto
+task.spawn(function()
+    while true do
+        for i = 0, 1, 0.01 do
+            btn.TextColor3 = Color3.fromHSV(i, 1, 1)
+            task.wait(0.03)
+        end
+    end
+end)
+
+-- Lógica del botón
+btn.MouseButton1Click:Connect(function()
+    desyncEnabled = not desyncEnabled
+    ToggleDesync(desyncEnabled)
+    
+    if desyncEnabled then
+        btn.Text = "DESYNC: ON"
+        main.BorderColor3 = Color3.fromRGB(0, 255, 0) -- Cambia a verde al activar
+    else
+        btn.Text = "DESYNC: OFF"
+        main.BorderColor3 = Color3.fromRGB(255, 0, 0) -- Vuelve a rojo
+    end
+end)
