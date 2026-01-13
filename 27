@@ -1,0 +1,116 @@
+-- SONYC SPEED PROJECT V6 - FIXED 24 BASE
+local Player = game.Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+
+local ProjectConfig = {
+    Active = false,
+    TargetSpeed = 24 -- Ahora el mínimo y base es 24
+}
+
+-- UI MODERNA
+local ScreenGui = Instance.new("ScreenGui", Player.PlayerGui)
+ScreenGui.Name = "Sonyc_Speed_V6"
+ScreenGui.ResetOnSpawn = false
+
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 240, 0, 140)
+MainFrame.Position = UDim2.new(0.5, -120, 0.8, -50)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+MainFrame.Active = true
+MainFrame.Draggable = true
+Instance.new("UICorner", MainFrame)
+
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Color = Color3.fromRGB(0, 200, 255)
+MainStroke.Thickness = 2.5
+
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(1, 0, 0, 35)
+Title.Text = "SONYC SPEED PROJECT"
+Title.Font = Enum.Font.GothamBold
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.TextSize = 14
+Title.BackgroundTransparency = 1
+
+local SpeedInput = Instance.new("TextBox", MainFrame)
+SpeedInput.Size = UDim2.new(0, 100, 0, 35)
+SpeedInput.Position = UDim2.new(0.5, -50, 0.35, 0)
+SpeedInput.BackgroundColor3 = Color3.fromRGB(30, 35, 50)
+SpeedInput.Text = "24"
+SpeedInput.Font = Enum.Font.GothamBold
+SpeedInput.TextColor3 = Color3.fromRGB(0, 255, 255)
+SpeedInput.TextSize = 22
+Instance.new("UICorner", SpeedInput)
+
+local ToggleBtn = Instance.new("TextButton", MainFrame)
+ToggleBtn.Size = UDim2.new(0.9, 0, 0, 35)
+ToggleBtn.Position = UDim2.new(0.05, 0, 0.7, 0)
+ToggleBtn.Text = "SPEED: OFF"
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 50, 70)
+ToggleBtn.TextColor3 = Color3.new(1, 1, 1)
+Instance.new("UICorner", ToggleBtn)
+
+-- Botón Minimizar
+local MinBtn = Instance.new("TextButton", MainFrame)
+MinBtn.Size = UDim2.new(0, 25, 0, 25)
+MinBtn.Position = UDim2.new(1, -30, 0, 5)
+MinBtn.Text = "-"
+MinBtn.BackgroundColor3 = Color3.fromRGB(40, 45, 60)
+MinBtn.TextColor3 = Color3.new(1, 1, 1)
+Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 5)
+
+-----------------------------------------------------------
+-- LÓGICA DE VELOCIDAD POR IMPULSO FÍSICO (ANTI-REGEN)
+-----------------------------------------------------------
+
+SpeedInput.FocusLost:Connect(function()
+    local val = tonumber(SpeedInput.Text)
+    if val then 
+        ProjectConfig.TargetSpeed = val 
+    else 
+        SpeedInput.Text = "24" 
+        ProjectConfig.TargetSpeed = 24
+    end
+end)
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    ProjectConfig.Active = not ProjectConfig.Active
+    ToggleBtn.Text = ProjectConfig.Active and "SPEED: ON" or "SPEED: OFF"
+    ToggleBtn.BackgroundColor3 = ProjectConfig.Active and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(45, 50, 70)
+    MainStroke.Color = ProjectConfig.Active and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(0, 200, 255)
+end)
+
+-- Usamos RenderStepped para una respuesta inmediata de las físicas
+RunService.RenderStepped:Connect(function()
+    if ProjectConfig.Active then
+        local char = Player.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChild("Humanoid")
+        
+        if root and hum then
+            if hum.MoveDirection.Magnitude > 0 then
+                -- Aplicamos el vector de velocidad directamente al HumanoidRootPart
+                -- Multiplicamos la dirección por el objetivo deseado
+                root.Velocity = Vector3.new(
+                    hum.MoveDirection.X * ProjectConfig.TargetSpeed, 
+                    root.Velocity.Y, 
+                    hum.MoveDirection.Z * ProjectConfig.TargetSpeed
+                )
+            end
+        end
+    end
+end)
+
+-- Funcionalidad Minimizar
+local min = false
+MinBtn.MouseButton1Click:Connect(function()
+    min = not min
+    SpeedInput.Visible = not min
+    ToggleBtn.Visible = not min
+    MainFrame:TweenSize(min and UDim2.new(0, 240, 0, 35) or UDim2.new(0, 240, 0, 140), "Out", "Quart", 0.2, true)
+    MinBtn.Text = min and "+" or "-"
+end)
+
+print("SONYC SPEED V6: Base 24 Active.")
