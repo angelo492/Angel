@@ -1,0 +1,66 @@
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+
+local frame = script.Parent
+local toggleBtn = frame.Parent:WaitForChild("ToggleBtn")
+local speedBtn = frame:WaitForChild("SpeedButton")
+
+local speedEnabled = false
+local speedValue = 24
+
+-- 1. FUNCIÓN: MOVER EL HUD (DRAGGABLE)
+local dragging, dragInput, dragStart, startPos
+frame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = frame.Position
+	end
+end)
+
+frame.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement then
+		dragInput = input
+	end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		local delta = input.Position - dragStart
+		frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+
+game:GetService("UserInputService").InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
+	end
+end)
+
+-- 2. FUNCIÓN: DESPLEGAR / OCULTAR
+toggleBtn.MouseButton1Click:Connect(function()
+	frame.Visible = not frame.Visible
+end)
+
+-- 3. FUNCIÓN: SPEED 24 (SIN RETROCESO)
+speedBtn.MouseButton1Click:Connect(function()
+	speedEnabled = not speedEnabled
+	
+	if speedEnabled then
+		speedBtn.Text = "Speed: ON (24)"
+		speedBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 100) -- Verde al activar
+		humanoid.WalkSpeed = speedValue
+	else
+		speedBtn.Text = "Speed: OFF"
+		speedBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0) -- Rojo al desactivar
+		humanoid.WalkSpeed = 16 -- Velocidad normal de Roblox
+	end
+end)
+
+-- Asegurar que la velocidad se mantenga al respawnear
+player.CharacterAdded:Connect(function(newChar)
+	character = newChar
+	humanoid = newChar:WaitForChild("Humanoid")
+	if speedEnabled then humanoid.WalkSpeed = speedValue end
+end)
