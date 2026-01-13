@@ -1,0 +1,153 @@
+-- SONYC PROJECT V13 - GHOST DESYNC & BRAINROT STEALER
+local Player = game.Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+
+local ProjectConfig = {
+    SpeedActive = false,
+    TargetSpeed = 24,
+    EspActive = false,
+    DesyncActive = false,
+    GhostPart = nil
+}
+
+-- UI PRINCIPAL
+local ScreenGui = Instance.new("ScreenGui", Player.PlayerGui)
+ScreenGui.Name = "Sonyc_Brainrot_V13"
+ScreenGui.ResetOnSpawn = false
+
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 240, 0, 250)
+MainFrame.Position = UDim2.new(0.5, -120, 0.5, -125)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 10, 20)
+MainFrame.Active = true
+MainFrame.Draggable = true
+Instance.new("UICorner", MainFrame)
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Color = Color3.fromRGB(255, 0, 255)
+MainStroke.Thickness = 3
+
+local Scroll = Instance.new("ScrollingFrame", MainFrame)
+Scroll.Size = UDim2.new(1, -20, 1, -50)
+Scroll.Position = UDim2.new(0, 10, 0, 40)
+Scroll.BackgroundTransparency = 1
+Scroll.CanvasSize = UDim2.new(0, 0, 0, 260)
+Scroll.ScrollBarThickness = 0
+
+local Layout = Instance.new("UIListLayout", Scroll)
+Layout.Padding = UDim.new(0, 8)
+Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+local function CreateButton(text, configKey)
+    local Btn = Instance.new("TextButton", Scroll)
+    Btn.Size = UDim2.new(0.95, 0, 0, 38)
+    Btn.Text = text .. ": OFF"
+    Btn.Font = Enum.Font.GothamBold
+    Btn.TextColor3 = Color3.new(1, 1, 1)
+    Btn.BackgroundColor3 = Color3.fromRGB(35, 30, 45)
+    Instance.new("UICorner", Btn)
+    local Stroke = Instance.new("UIStroke", Btn)
+    Stroke.Color = Color3.fromRGB(255, 0, 255)
+    Stroke.Enabled = false
+
+    Btn.MouseButton1Click:Connect(function()
+        ProjectConfig[configKey] = not ProjectConfig[configKey]
+        Btn.Text = text .. (ProjectConfig[configKey] and ": ON" or ": OFF")
+        Btn.BackgroundColor3 = ProjectConfig[configKey] and Color3.fromRGB(120, 0, 120) or Color3.fromRGB(35, 30, 45)
+        Stroke.Enabled = ProjectConfig[configKey]
+        
+        -- Lógica de GHOST DESYNC
+        local char = Player.Character
+        if configKey == "DesyncActive" and char then
+            local root = char:FindFirstChild("HumanoidRootPart")
+            if ProjectConfig.DesyncActive then
+                -- Crear un fantasma visual donde te quedas
+                ProjectConfig.GhostPart = Instance.new("Part", workspace)
+                ProjectConfig.GhostPart.Size = root.Size
+                ProjectConfig.GhostPart.CFrame = root.CFrame
+                ProjectConfig.GhostPart.Anchored = true
+                ProjectConfig.GhostPart.CanCollide = false
+                ProjectConfig.GhostPart.Transparency = 0.5
+                ProjectConfig.GhostPart.Color = Color3.fromRGB(255, 0, 255)
+                
+                -- Desactivar replicación de posición al servidor (Lag Artificial)
+                settings().Network.IncomingReplicationLag = 1000
+            else
+                -- Volver a la normalidad
+                settings().Network.IncomingReplicationLag = 0
+                if ProjectConfig.GhostPart then
+                    ProjectConfig.GhostPart:Destroy()
+                    ProjectConfig.GhostPart = nil
+                end
+            end
+        end
+    end)
+end
+
+local SpeedInput = Instance.new("TextBox", Scroll)
+SpeedInput.Size = UDim2.new(0.95, 0, 0, 35)
+SpeedInput.Text = "24"
+SpeedInput.Font = Enum.Font.GothamBold
+SpeedInput.TextColor3 = Color3.new(1, 1, 1)
+SpeedInput.BackgroundColor3 = Color3.fromRGB(25, 20, 35)
+Instance.new("UICorner", SpeedInput)
+
+CreateButton("SPEED (NO RESET)", "SpeedActive")
+CreateButton("ESP ROLES", "EspActive")
+CreateButton("GHOST DESYNC (LAG)", "DesyncActive")
+
+-----------------------------------------------------------
+-- LÓGICA DE FÍSICAS Y ROBO
+-----------------------------------------------------------
+SpeedInput.FocusLost:Connect(function()
+    ProjectConfig.TargetSpeed = tonumber(SpeedInput.Text) or 24
+end)
+
+RunService.RenderStepped:Connect(function()
+    local char = Player.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChild("Humanoid")
+    
+    if root and hum then
+        -- Speed con Velocity estable
+        if ProjectConfig.SpeedActive and hum.MoveDirection.Magnitude > 0 then
+            root.Velocity = Vector3.new(hum.MoveDirection.X * ProjectConfig.TargetSpeed, root.Velocity.Y, hum.MoveDirection.Z * ProjectConfig.TargetSpeed)
+        end
+    end
+end)
+
+-- ESP Magenta
+RunService.Heartbeat:Connect(function()
+    for _, v in pairs(game.Players:GetPlayers()) do
+        if v ~= Player and v.Character then
+            local high = v.Character:FindFirstChild("SonycHighlight")
+            if ProjectConfig.EspActive then
+                if not high then
+                    high = Instance.new("Highlight", v.Character)
+                    high.Name = "SonycHighlight"
+                    high.FillColor = Color3.fromRGB(255, 0, 255)
+                    high.FillTransparency = 0.4
+                end
+            elseif high then high:Destroy() end
+        end
+    end
+end)
+
+-- Botón Minimizar
+local MinBtn = Instance.new("TextButton", MainFrame)
+MinBtn.Size = UDim2.new(0, 25, 0, 25)
+MinBtn.Position = UDim2.new(1, -30, 0, 5)
+MinBtn.Text = "-"
+MinBtn.BackgroundColor3 = Color3.fromRGB(30, 20, 40)
+MinBtn.TextColor3 = Color3.new(1, 1, 1)
+Instance.new("UICorner", MinBtn)
+
+local isMin = false
+MinBtn.MouseButton1Click:Connect(function()
+    isMin = not isMin
+    Scroll.Visible = not isMin
+    MainFrame:TweenSize(isMin and UDim2.new(0, 240, 0, 35) or UDim2.new(0, 240, 0, 250), "Out", "Quart", 0.2, true)
+    MinBtn.Text = isMin and "+" or "-"
+end)
+
+print("SONYC V13: GHOST BRAINROT LOADED")
