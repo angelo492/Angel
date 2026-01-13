@@ -1,0 +1,147 @@
+-- SONYC SPEED PROJECT - CUSTOM INPUT DESIGN
+local Player = game.Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+
+-- Configuración del Proyecto
+local ProjectConfig = {
+    Active = false,
+    Speed = 24 -- Valor inicial
+}
+
+-- Crear Interfaz
+local ScreenGui = Instance.new("ScreenGui", Player.PlayerGui)
+ScreenGui.Name = "Sonyc_SpeedProject_V2"
+ScreenGui.ResetOnSpawn = false
+
+-- Marco Principal
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 240, 0, 140)
+MainFrame.Position = UDim2.new(0.5, -120, 0.8, -50)
+MainFrame.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
+MainFrame.BackgroundTransparency = 0.15
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+local UICorner = Instance.new("UICorner", MainFrame)
+UICorner.CornerRadius = UDim.new(0, 10)
+
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Color = Color3.fromRGB(0, 255, 255) -- Cyan Neón
+MainStroke.Thickness = 2
+
+-- Barra de Título
+local Header = Instance.new("Frame", MainFrame)
+Header.Size = UDim2.new(1, 0, 0, 35)
+Header.BackgroundTransparency = 1
+
+local Title = Instance.new("TextLabel", Header)
+Title.Size = UDim2.new(1, -40, 1, 0)
+Title.Position = UDim2.new(0, 12, 0, 0)
+Title.Text = "SONYC SPEED CONTROL"
+Title.Font = Enum.Font.GothamBold
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.TextSize = 13
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.BackgroundTransparency = 1
+
+-- Botón Minimizar
+local MinBtn = Instance.new("TextButton", Header)
+MinBtn.Size = UDim2.new(0, 25, 0, 25)
+MinBtn.Position = UDim2.new(1, -30, 0, 5)
+MinBtn.Text = "-"
+MinBtn.BackgroundColor3 = Color3.fromRGB(30, 35, 50)
+MinBtn.TextColor3 = Color3.new(1, 1, 1)
+MinBtn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 5)
+
+-- CONTENIDO DEL HUD
+local Content = Instance.new("Frame", MainFrame)
+Content.Size = UDim2.new(1, 0, 1, -35)
+Content.Position = UDim2.new(0, 0, 0, 35)
+Content.BackgroundTransparency = 1
+
+-- Etiqueta de instrucción
+local InfoLabel = Instance.new("TextLabel", Content)
+InfoLabel.Size = UDim2.new(1, 0, 0, 20)
+InfoLabel.Position = UDim2.new(0, 0, 0, 5)
+InfoLabel.Text = "ESCRIBE LA VELOCIDAD ABAJO:"
+InfoLabel.Font = Enum.Font.GothamMedium
+InfoLabel.TextSize = 11
+InfoLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+InfoLabel.BackgroundTransparency = 1
+
+-- CAMPO DE TEXTO (Aquí pones el número)
+local SpeedInput = Instance.new("TextBox", Content)
+SpeedInput.Size = UDim2.new(0, 80, 0, 35)
+SpeedInput.Position = UDim2.new(0.5, -40, 0.35, 0)
+SpeedInput.BackgroundColor3 = Color3.fromRGB(25, 30, 45)
+SpeedInput.Text = tostring(ProjectConfig.Speed)
+SpeedInput.Font = Enum.Font.GothamBold
+SpeedInput.TextColor3 = Color3.fromRGB(0, 255, 255)
+SpeedInput.TextSize = 20
+SpeedInput.ClearTextOnFocus = true
+Instance.new("UICorner", SpeedInput)
+Instance.new("UIStroke", SpeedInput).Color = Color3.fromRGB(60, 60, 80)
+
+-- Botón de Activación
+local ToggleBtn = Instance.new("TextButton", Content)
+ToggleBtn.Size = UDim2.new(0.9, 0, 0, 35)
+ToggleBtn.Position = UDim2.new(0.05, 0, 0.7, 0)
+ToggleBtn.Text = "ESTADO: APAGADO"
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.TextColor3 = Color3.new(1, 1, 1)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 50, 65)
+Instance.new("UICorner", ToggleBtn)
+
+-----------------------------------------------------------
+-- FUNCIONALIDAD
+-----------------------------------------------------------
+
+-- 1. Minimizar
+local minimized = false
+MinBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    Content.Visible = not minimized
+    MainFrame:TweenSize(minimized and UDim2.new(0, 240, 0, 35) or UDim2.new(0, 240, 0, 140), "Out", "Quart", 0.3, true)
+    MinBtn.Text = minimized and "+" or "-"
+end)
+
+-- 2. Cambiar número (Validación)
+SpeedInput.FocusLost:Connect(function(enterPressed)
+    local num = tonumber(SpeedInput.Text)
+    if num then
+        ProjectConfig.Speed = num
+        SpeedInput.Text = tostring(num)
+    else
+        SpeedInput.Text = tostring(ProjectConfig.Speed) -- Revertir si no es número
+    end
+end)
+
+-- 3. Activar/Desactivar
+ToggleBtn.MouseButton1Click:Connect(function()
+    ProjectConfig.Active = not ProjectConfig.Active
+    if ProjectConfig.Active then
+        ToggleBtn.Text = "ESTADO: ACTIVADO"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
+        MainStroke.Color = Color3.fromRGB(0, 255, 120) -- Cambia a verde al activar
+    else
+        ToggleBtn.Text = "ESTADO: APAGADO"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 50, 65)
+        MainStroke.Color = Color3.fromRGB(0, 255, 255) -- Vuelve a cyan
+    end
+end)
+
+-- 4. Bucle de Velocidad
+RunService.Heartbeat:Connect(function()
+    local char = Player.Character
+    if char and char:FindFirstChild("Humanoid") then
+        if ProjectConfig.Active then
+            char.Humanoid.WalkSpeed = ProjectConfig.Speed
+        else
+            char.Humanoid.WalkSpeed = 16
+        end
+    end
+end)
+
+print("Sonyc Speed Input System Loaded.")
