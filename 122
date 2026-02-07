@@ -1,0 +1,128 @@
+local player = game.Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
+
+-- GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "ModernHUD"
+gui.Parent = player:WaitForChild("PlayerGui")
+
+-- Botón Toggle
+local toggle = Instance.new("TextButton")
+toggle.Parent = gui
+toggle.Size = UDim2.new(0, 55, 0, 55)
+toggle.Position = UDim2.new(0, 20, 0, 200)
+toggle.Text = "≡"
+toggle.TextSize = 30
+toggle.BackgroundColor3 = Color3.fromRGB(0, 140, 255)
+toggle.TextColor3 = Color3.fromRGB(255,255,255)
+toggle.BorderSizePixel = 0
+toggle.AutoButtonColor = false
+toggle.Active = true
+toggle.Draggable = true
+
+Instance.new("UICorner", toggle).CornerRadius = UDim.new(1,0)
+
+-- Panel
+local frame = Instance.new("Frame")
+frame.Parent = gui
+frame.Size = UDim2.new(0, 330, 0, 260)
+frame.Position = UDim2.new(0, 90, 0, 200)
+frame.BackgroundColor3 = Color3.fromRGB(15, 25, 45)
+frame.BorderSizePixel = 0
+frame.Visible = false
+frame.Active = true
+frame.Draggable = true
+
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 18)
+
+local stroke = Instance.new("UIStroke", frame)
+stroke.Thickness = 2
+stroke.Color = Color3.fromRGB(0,150,255)
+
+-- Título
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,45)
+title.Text = "🔷 HUD MODERNO"
+title.TextSize = 22
+title.Font = Enum.Font.GothamBold
+title.TextColor3 = Color3.fromRGB(255,255,255)
+title.BackgroundTransparency = 1
+
+-- Creador de botones
+local function createButton(text, posY)
+    local btn = Instance.new("TextButton", frame)
+    btn.Size = UDim2.new(1,-40,0,45)
+    btn.Position = UDim2.new(0,20,0,posY)
+    btn.Text = text
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 16
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.BackgroundColor3 = Color3.fromRGB(0,120,255)
+    btn.BorderSizePixel = 0
+    btn.AutoButtonColor = false
+
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,12)
+
+    return btn
+end
+
+-- Botones
+local saveBtn = createButton("📌 Guardar ubicación", 60)
+local tpBtn   = createButton("⚡ Teleport a guardada", 120)
+local godBtn  = createButton("🛡 God Mode: OFF", 180)
+
+-- Variables
+local savedCFrame = nil
+local godMode = false
+
+-- Guardar posición
+saveBtn.MouseButton1Click:Connect(function()
+    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        savedCFrame = hrp.CFrame
+        saveBtn.Text = "✅ Guardado"
+        task.wait(1)
+        saveBtn.Text = "📌 Guardar ubicación"
+    end
+end)
+
+-- Teleport guardado
+tpBtn.MouseButton1Click:Connect(function()
+    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if hrp and savedCFrame then
+        hrp.CFrame = savedCFrame
+    end
+end)
+
+-- God Mode
+godBtn.MouseButton1Click:Connect(function()
+    godMode = not godMode
+    godBtn.Text = godMode and "🛡 God Mode: ON" or "🛡 God Mode: OFF"
+end)
+
+task.spawn(function()
+    while true do
+        if godMode and player.Character and player.Character:FindFirstChild("Humanoid") then
+            player.Character.Humanoid.Health = player.Character.Humanoid.MaxHealth
+        end
+        task.wait(0.2)
+    end
+end)
+
+-- Animación HUD
+local open = false
+toggle.MouseButton1Click:Connect(function()
+    open = not open
+    frame.Visible = true
+
+    local goal = {}
+    goal.Size = open and UDim2.new(0,330,0,260) or UDim2.new(0,0,0,0)
+
+    local tween = TweenService:Create(frame, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), goal)
+    tween:Play()
+
+    if not open then
+        tween.Completed:Wait()
+        frame.Visible = false
+    end
+end)
