@@ -1,0 +1,153 @@
+-- UNIVERSAL HUD - FIXED & STABLE VERSION
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+
+local savedCFrame = nil
+local godMode = false
+local humanoid = nil
+local root = nil
+
+-- Character handler
+local function setupCharacter(char)
+    humanoid = char:WaitForChild("Humanoid")
+    root = char:WaitForChild("HumanoidRootPart")
+
+    humanoid.BreakJointsOnDeath = false
+    humanoid.RequiresNeck = false
+
+    humanoid.HealthChanged:Connect(function(hp)
+        if godMode and hp < humanoid.MaxHealth then
+            humanoid.Health = humanoid.MaxHealth
+        end
+    end)
+end
+
+if player.Character then
+    setupCharacter(player.Character)
+end
+
+player.CharacterAdded:Connect(setupCharacter)
+
+-- GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "UniversalHUD"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+-- Toggle button
+local toggle = Instance.new("TextButton", gui)
+toggle.Size = UDim2.new(0,55,0,55)
+toggle.Position = UDim2.new(0,20,0.45,0)
+toggle.Text = "≡"
+toggle.TextSize = 32
+toggle.Font = Enum.Font.GothamBold
+toggle.BackgroundColor3 = Color3.fromRGB(0,140,255)
+toggle.TextColor3 = Color3.new(1,1,1)
+toggle.BorderSizePixel = 0
+toggle.Active = true
+toggle.Draggable = true
+
+Instance.new("UICorner", toggle).CornerRadius = UDim.new(1,0)
+
+-- Panel
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0,330,0,250)
+frame.Position = UDim2.new(0,90,0.45,0)
+frame.BackgroundColor3 = Color3.fromRGB(15,25,45)
+frame.BorderSizePixel = 0
+frame.Visible = false
+frame.Active = true
+frame.Draggable = true
+
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0,16)
+
+local stroke = Instance.new("UIStroke", frame)
+stroke.Thickness = 2
+stroke.Color = Color3.fromRGB(0,150,255)
+
+-- Title
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,45)
+title.Text = "🔷 UNIVERSAL HUD"
+title.TextSize = 22
+title.Font = Enum.Font.GothamBold
+title.TextColor3 = Color3.new(1,1,1)
+title.BackgroundTransparency = 1
+
+-- Button creator
+local function makeButton(txt, y)
+    local b = Instance.new("TextButton", frame)
+    b.Size = UDim2.new(1,-40,0,44)
+    b.Position = UDim2.new(0,20,0,y)
+    b.Text = txt
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 16
+    b.TextColor3 = Color3.new(1,1,1)
+    b.BackgroundColor3 = Color3.fromRGB(0,120,255)
+    b.BorderSizePixel = 0
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0,12)
+    return b
+end
+
+local saveBtn = makeButton("📌 Guardar ubicación", 60)
+local tpBtn   = makeButton("⚡ Teleport guardado", 115)
+local godBtn  = makeButton("🛡 God Mode: OFF", 170)
+
+-- Save
+saveBtn.MouseButton1Click:Connect(function()
+    if root then
+        savedCFrame = root.CFrame
+        saveBtn.Text = "✅ Guardado"
+        task.delay(1,function()
+            saveBtn.Text = "📌 Guardar ubicación"
+        end)
+    end
+end)
+
+-- Teleport FIXED
+tpBtn.MouseButton1Click:Connect(function()
+    if root and savedCFrame then
+        local vel = root.AssemblyLinearVelocity
+        root:PivotTo(savedCFrame)
+        root.AssemblyLinearVelocity = vel
+    end
+end)
+
+-- God Mode toggle
+godBtn.MouseButton1Click:Connect(function()
+    godMode = not godMode
+    godBtn.Text = godMode and "🛡 God Mode: ON" or "🛡 God Mode: OFF"
+end)
+
+-- God Mode engine
+RunService.Heartbeat:Connect(function()
+    if godMode and humanoid then
+        humanoid.MaxHealth = math.huge
+        humanoid.Health = humanoid.MaxHealth
+        humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead,false)
+    end
+end)
+
+-- HUD animation
+local open = false
+toggle.MouseButton1Click:Connect(function()
+    open = not open
+    frame.Visible = true
+
+    local tween = TweenService:Create(
+        frame,
+        TweenInfo.new(0.25,Enum.EasingStyle.Quart,Enum.EasingDirection.Out),
+        {Size = open and UDim2.new(0,330,0,250) or UDim2.new(0,0,0,0)}
+    )
+
+    tween:Play()
+
+    if not open then
+        tween.Completed:Wait()
+        frame.Visible = false
+    end
+end)
