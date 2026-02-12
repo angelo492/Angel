@@ -1,0 +1,166 @@
+--// Universal HUD 100% Functional
+--// Compatible: All games | R6 + R15 | Respawn safe
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+
+-- Variables
+local savedCFrame = nil
+local godMode = false
+local currentHumanoid = nil
+
+-- Character handler
+local function getCharacter()
+    return player.Character or player.CharacterAdded:Wait()
+end
+
+local function getHumanoid()
+    local char = getCharacter()
+    return char:WaitForChild("Humanoid")
+end
+
+local function getRoot()
+    local char = getCharacter()
+    return char:WaitForChild("HumanoidRootPart")
+end
+
+-- Rehook humanoid on respawn
+local function onCharacterAdded(char)
+    currentHumanoid = char:WaitForChild("Humanoid")
+end
+
+if player.Character then
+    onCharacterAdded(player.Character)
+end
+
+player.CharacterAdded:Connect(onCharacterAdded)
+
+-- GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "UniversalHUD"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+-- Toggle Button
+local toggle = Instance.new("TextButton")
+toggle.Parent = gui
+toggle.Size = UDim2.new(0, 56, 0, 56)
+toggle.Position = UDim2.new(0, 20, 0.45, 0)
+toggle.Text = "≡"
+toggle.TextSize = 32
+toggle.Font = Enum.Font.GothamBold
+toggle.BackgroundColor3 = Color3.fromRGB(0, 140, 255)
+toggle.TextColor3 = Color3.fromRGB(255,255,255)
+toggle.BorderSizePixel = 0
+toggle.Active = true
+toggle.Draggable = true
+
+Instance.new("UICorner", toggle).CornerRadius = UDim.new(1,0)
+
+-- Panel
+local frame = Instance.new("Frame")
+frame.Parent = gui
+frame.Size = UDim2.new(0, 330, 0, 250)
+frame.Position = UDim2.new(0, 90, 0.45, 0)
+frame.BackgroundColor3 = Color3.fromRGB(14, 22, 40)
+frame.BorderSizePixel = 0
+frame.Visible = false
+frame.Active = true
+frame.Draggable = true
+
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
+
+local stroke = Instance.new("UIStroke", frame)
+stroke.Thickness = 2
+stroke.Color = Color3.fromRGB(0,150,255)
+
+-- Title
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,45)
+title.Text = "🔷 UNIVERSAL HUD"
+title.TextSize = 22
+title.Font = Enum.Font.GothamBold
+title.TextColor3 = Color3.fromRGB(255,255,255)
+title.BackgroundTransparency = 1
+
+-- Button creator
+local function createButton(text, posY)
+    local btn = Instance.new("TextButton", frame)
+    btn.Size = UDim2.new(1,-40,0,44)
+    btn.Position = UDim2.new(0,20,0,posY)
+    btn.Text = text
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 16
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.BackgroundColor3 = Color3.fromRGB(0,120,255)
+    btn.BorderSizePixel = 0
+    btn.AutoButtonColor = false
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,12)
+    return btn
+end
+
+-- Buttons
+local saveBtn = createButton("📌 Guardar ubicación", 60)
+local tpBtn   = createButton("⚡ Teleport guardado", 115)
+local godBtn  = createButton("🛡 God Mode: OFF", 170)
+
+-- Save position
+saveBtn.MouseButton1Click:Connect(function()
+    local hrp = getRoot()
+    if hrp then
+        savedCFrame = hrp.CFrame
+        saveBtn.Text = "✅ Ubicación guardada"
+        task.delay(1, function()
+            saveBtn.Text = "📌 Guardar ubicación"
+        end)
+    end
+end)
+
+-- Teleport
+tpBtn.MouseButton1Click:Connect(function()
+    if savedCFrame then
+        local hrp = getRoot()
+        if hrp then
+            hrp.CFrame = savedCFrame
+        end
+    end
+end)
+
+-- God Mode toggle
+godBtn.MouseButton1Click:Connect(function()
+    godMode = not godMode
+    godBtn.Text = godMode and "🛡 God Mode: ON" or "🛡 God Mode: OFF"
+end)
+
+-- God Mode engine (very stable)
+RunService.Heartbeat:Connect(function()
+    if godMode and currentHumanoid then
+        currentHumanoid.MaxHealth = math.huge
+        currentHumanoid.Health = math.huge
+        currentHumanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+    end
+end)
+
+-- HUD Animation
+local open = false
+
+toggle.MouseButton1Click:Connect(function()
+    open = not open
+    frame.Visible = true
+
+    local tween = TweenService:Create(
+        frame,
+        TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+        {Size = open and UDim2.new(0,330,0,250) or UDim2.new(0,0,0,0)}
+    )
+
+    tween:Play()
+
+    if not open then
+        tween.Completed:Wait()
+        frame.Visible = false
+    end
+end)
