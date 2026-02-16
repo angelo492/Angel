@@ -1,0 +1,198 @@
+--// PRO HUD FINAL FIX
+
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local humanoid
+
+local function setupChar(char)
+	humanoid = char:WaitForChild("Humanoid")
+end
+
+if player.Character then
+	setupChar(player.Character)
+end
+player.CharacterAdded:Connect(setupChar)
+
+-- GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "ProHUD"
+gui.Parent = player:WaitForChild("PlayerGui")
+gui.ResetOnSpawn = false
+
+-- MAIN
+local main = Instance.new("Frame", gui)
+main.Size = UDim2.new(0, 420, 0, 240)
+main.Position = UDim2.new(0.5, -210, 0.5, -120)
+main.BackgroundColor3 = Color3.fromRGB(20,20,30)
+main.Active = true
+main.ClipsDescendants = true
+
+Instance.new("UICorner", main).CornerRadius = UDim.new(0,18)
+local stroke = Instance.new("UIStroke", main)
+stroke.Thickness = 2
+stroke.Color = Color3.fromRGB(0,200,255)
+
+-- TOP BAR
+local top = Instance.new("Frame", main)
+top.Size = UDim2.new(1,0,0,40)
+top.BackgroundTransparency = 1
+
+local title = Instance.new("TextLabel", top)
+title.Size = UDim2.new(1,-50,1,0)
+title.Position = UDim2.new(0,10,0,0)
+title.Text = "⚡ PRO HUD"
+title.TextColor3 = Color3.fromRGB(255,255,255)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.BackgroundTransparency = 1
+title.TextXAlignment = Enum.TextXAlignment.Left
+
+local minBtn = Instance.new("TextButton", top)
+minBtn.Size = UDim2.new(0,30,0,30)
+minBtn.Position = UDim2.new(1,-35,0,5)
+minBtn.Text = "—"
+minBtn.TextColor3 = Color3.fromRGB(255,255,255)
+minBtn.Font = Enum.Font.GothamBold
+minBtn.TextSize = 20
+minBtn.BackgroundTransparency = 1
+
+-- CONTENT
+local content = Instance.new("Frame", main)
+content.Position = UDim2.new(0,10,0,55)
+content.Size = UDim2.new(1,-20,1,-65)
+content.BackgroundTransparency = 1
+
+-- SPEED BUTTON
+local speedBtn = Instance.new("TextButton", content)
+speedBtn.Size = UDim2.new(1,0,0,45)
+speedBtn.Text = "⚡ SPEED: OFF"
+speedBtn.TextColor3 = Color3.fromRGB(255,255,255)
+speedBtn.Font = Enum.Font.GothamBold
+speedBtn.TextSize = 15
+speedBtn.BackgroundColor3 = Color3.fromRGB(255,70,70)
+Instance.new("UICorner", speedBtn).CornerRadius = UDim.new(0,12)
+
+-- SLIDER BG
+local sliderBG = Instance.new("Frame", content)
+sliderBG.Position = UDim2.new(0,0,0,65)
+sliderBG.Size = UDim2.new(1,0,0,14)
+sliderBG.BackgroundColor3 = Color3.fromRGB(60,60,90)
+Instance.new("UICorner", sliderBG).CornerRadius = UDim.new(1,0)
+
+-- SLIDER BAR
+local slider = Instance.new("Frame", sliderBG)
+slider.Size = UDim2.new(0.15,0,1,0)
+slider.BackgroundColor3 = Color3.fromRGB(0,200,255)
+Instance.new("UICorner", slider).CornerRadius = UDim.new(1,0)
+
+-- SPEED LABEL
+local speedValue = Instance.new("TextLabel", content)
+speedValue.Position = UDim2.new(0,0,0,85)
+speedValue.Size = UDim2.new(1,0,0,25)
+speedValue.Text = "Velocidad: 16"
+speedValue.TextColor3 = Color3.fromRGB(200,200,255)
+speedValue.Font = Enum.Font.Gotham
+speedValue.TextSize = 14
+speedValue.BackgroundTransparency = 1
+
+-- VARIABLES
+local minSpeed = 16
+local maxSpeed = 120
+local currentSpeed = 16
+local enabled = false
+
+-- SPEED TOGGLE
+speedBtn.MouseButton1Click:Connect(function()
+	enabled = not enabled
+	
+	if enabled then
+		speedBtn.Text = "⚡ SPEED: ON"
+		speedBtn.BackgroundColor3 = Color3.fromRGB(0,200,120)
+		if humanoid then humanoid.WalkSpeed = currentSpeed end
+	else
+		speedBtn.Text = "⚡ SPEED: OFF"
+		speedBtn.BackgroundColor3 = Color3.fromRGB(255,70,70)
+		if humanoid then humanoid.WalkSpeed = minSpeed end
+	end
+end)
+
+-- SLIDER SYSTEM (FIX TOTAL)
+local dragging = false
+
+local function updateSlider(x)
+	local pos = math.clamp((x - sliderBG.AbsolutePosition.X) / sliderBG.AbsoluteSize.X, 0, 1)
+	slider.Size = UDim2.new(pos,0,1,0)
+	currentSpeed = math.floor(minSpeed + (maxSpeed - minSpeed) * pos)
+	speedValue.Text = "Velocidad: "..currentSpeed
+	
+	if enabled and humanoid then
+		humanoid.WalkSpeed = currentSpeed
+	end
+end
+
+sliderBG.InputBegan:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		updateSlider(i.Position.X)
+	end
+end)
+
+sliderBG.InputEnded:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+		dragging = false
+	end
+end)
+
+UIS.InputChanged:Connect(function(i)
+	if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+		updateSlider(i.Position.X)
+	end
+end)
+
+-- DRAG HUD
+local drag = false
+local startPos, startFrame
+
+top.InputBegan:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+		drag = true
+		startPos = i.Position
+		startFrame = main.Position
+	end
+end)
+
+top.InputEnded:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+		drag = false
+	end
+end)
+
+UIS.InputChanged:Connect(function(i)
+	if drag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+		local delta = i.Position - startPos
+		main.Position = UDim2.new(
+			startFrame.X.Scale,
+			startFrame.X.Offset + delta.X,
+			startFrame.Y.Scale,
+			startFrame.Y.Offset + delta.Y
+		)
+	end
+end)
+
+-- MINIMIZE SYSTEM (FIX REAL)
+local open = true
+local fullSize = main.Size
+
+minBtn.MouseButton1Click:Connect(function()
+	open = not open
+	if open then
+		content.Visible = true
+		TweenService:Create(main, TweenInfo.new(0.25), {Size = fullSize}):Play()
+	else
+		content.Visible = false
+		TweenService:Create(main, TweenInfo.new(0.25), {Size = UDim2.new(fullSize.X.Scale, fullSize.X.Offset, 0, 45)}):Play()
+	end
+end)
