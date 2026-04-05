@@ -1,0 +1,597 @@
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local StarterGui = game:GetService("StarterGui")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local PlayerGui = player:WaitForChild("PlayerGui")
+
+local character = player.Character or player.CharacterAdded:Wait()
+if not character then
+    warn("Failed to load player character")
+    return
+end
+local humanoid = character:FindFirstChild("Humanoid")
+local root = character:FindFirstChild("HumanoidRootPart")
+if not (humanoid and root) then
+    warn("Humanoid or HumanoidRootPart not found")
+    return
+end
+
+-- Settings file management
+local settingsFileName = "NamelessHubSettings.json"
+local HttpService = game:GetService("HttpService")
+
+local defaultSettings = {
+    walkspeedEnabled = false,
+    currentWalkSpeed = 80,
+    infiniteJumpEnabled = false,
+    boostJumpEnabled = false,
+    currentBoostStrength = 150,
+    espEnabled = false,
+    timerEspEnabled = false,
+    webSlingerAutoAimEnabled = false,
+    antiTrapEnabled = false,
+    antiHitEnabled = false,
+    brainrotEspEnabled = false,
+    flingEnabled = false,
+    guiPosition = {0, 10, 1, -60}
+}
+
+local function saveSettings(settings)
+    local success, result = pcall(function()
+        local jsonString = HttpService:JSONEncode(settings)
+        writefile(settingsFileName, jsonString)
+    end)
+    if not success then
+        warn("Failed to save settings: " .. tostring(result))
+    end
+end
+
+local function loadSettings()
+    if isfile(settingsFileName) then
+        local jsonString = readfile(settingsFileName)
+        local decoded = HttpService:JSONDecode(jsonString)
+
+        -- Merge with default settings to ensure all keys exist
+        for key, value in pairs(defaultSettings) do
+            if decoded[key] == nil then
+                decoded[key] = value
+            end
+        end
+
+        return decoded
+    else
+        warn("Settings file not found, using default settings.")
+        return defaultSettings
+    end
+end
+
+local settings = loadSettings()
+
+local oldGui = PlayerGui:FindFirstChild("NamelessHubGui")
+if oldGui then oldGui:Destroy() end
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "NamelessHubGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = PlayerGui
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 50, 0, 50)
+mainFrame.Position = UDim2.new(settings.guiPosition[1], settings.guiPosition[2], settings.guiPosition[3], settings.guiPosition[4])
+mainFrame.AnchorPoint = Vector2.new(0, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+mainFrame.BorderSizePixel = 0
+mainFrame.ClipsDescendants = true
+mainFrame.Parent = screenGui
+
+local mainCorner = Instance.new("UICorner", mainFrame)
+mainCorner.CornerRadius = UDim.new(0, 12)
+
+local nhLabel = Instance.new("TextLabel")
+nhLabel.Name = "NHLabel"
+nhLabel.Size = UDim2.new(0, 50, 0, 50)
+nhLabel.Position = UDim2.new(0, 0, 0, 0)
+nhLabel.BackgroundTransparency = 1
+nhLabel.Text = "NH"
+nhLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+nhLabel.TextScaled = true
+nhLabel.Font = Enum.Font.GothamBold
+nhLabel.TextXAlignment = Enum.TextXAlignment.Center
+nhLabel.TextYAlignment = Enum.TextYAlignment.Center
+nhLabel.Parent = mainFrame
+
+local hubLabel = Instance.new("TextLabel")
+hubLabel.Size = UDim2.new(0, 50, 0, 20)
+hubLabel.Position = UDim2.new(0, 0, 0, 30)
+hubLabel.BackgroundTransparency = 1
+hubLabel.Text = "Hub"
+hubLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+hubLabel.TextScaled = true
+hubLabel.Font = Enum.Font.GothamBold
+hubLabel.TextTransparency = 1
+hubLabel.Visible = false
+hubLabel.Parent = mainFrame
+
+local openButton = Instance.new("TextButton")
+openButton.Size = UDim2.new(1, 0, 1, 0)
+openButton.BackgroundTransparency = 1
+openButton.Text = ""
+openButton.Parent = mainFrame
+
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0, 30, 0, 30)
+closeButton.Position = UDim2.new(1, -35, 0, 5)
+closeButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+closeButton.Text = "✕"
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.TextScaled = true
+closeButton.Font = Enum.Font.Gotham
+closeButton.Visible = false
+closeButton.BackgroundTransparency = 1
+closeButton.TextTransparency = 1
+closeButton.Parent = mainFrame
+
+local closeCorner = Instance.new("UICorner", closeButton)
+closeCorner.CornerRadius = UDim.new(1, 0)
+
+local dragging = false
+local dragStartPos
+local startFramePos
+local savedPosition = mainFrame.Position
+local openedPosition = UDim2.new(0.5, 0, 0.45, 0)
+
+-- State variables
+local walkspeedEnabled = settings.walkspeedEnabled
+local walkspeedConnection = nil
+local flingEnabled = settings.flingEnabled
+local flingConnection = nil
+local espEnabled = settings.espEnabled
+local espConnections = {}
+local espBillboards = {}
+local timerEspEnabled = settings.timerEspEnabled
+local activeConnections = {}
+local webSlingerAutoAimEnabled = settings.webSlingerAutoAimEnabled
+local webSlingerConnection = nil
+local infiniteJumpEnabled = settings.infiniteJumpEnabled
+local infiniteJumpConnection = nil
+local boostJumpEnabled = settings.boostJumpEnabled
+local boostJumpConnections = {}
+local currentWalkSpeed = settings.currentWalkSpeed
+local currentBoostStrength = settings.currentBoostStrength
+local antiTrapEnabled = settings.antiTrapEnabled
+local antiTrapConnection = nil
+local antiHitEnabled = settings.antiHitEnabled
+local brainrotEspEnabled = settings.brainrotEspEnabled
+
+openButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStartPos = input.Position
+        startFramePos = mainFrame.Position
+    end
+end)
+
+openButton.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStartPos
+        local newPos = UDim2.new(
+            startFramePos.X.Scale,
+            startFramePos.X.Offset + delta.X,
+            startFramePos.Y.Scale,
+            startFramePos.Y.Offset + delta.Y
+        )
+        mainFrame.Position = newPos
+        savedPosition = newPos
+        -- Update settings
+        settings.guiPosition = {newPos.X.Scale, newPos.X.Offset, newPos.Y.Scale, newPos.Y.Offset}
+        saveSettings(settings)
+    end
+end)
+
+openButton.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+local function createTabButton(name, yOffset)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0.3, -10, 0, 40)
+    button.Position = UDim2.new(0, 5, 0, yOffset)
+    button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    button.Text = name
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.TextSize = 14
+    button.Font = Enum.Font.Gotham
+    button.BorderSizePixel = 0
+    button.Visible = false
+    button.BackgroundTransparency = 1
+    button.TextTransparency = 1
+    button.Parent = mainFrame
+
+    local corner = Instance.new("UICorner", button)
+    corner.CornerRadius = UDim.new(0, 8)
+
+    button.MouseButton1Down:Connect(function()
+        TweenService:Create(button, TweenInfo.new(0.2), {
+            BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+        }):Play()
+    end)
+    
+    button.MouseButton1Up:Connect(function()
+        TweenService:Create(button, TweenInfo.new(0.3), {
+            BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        }):Play()
+    end)
+    
+    button.MouseLeave:Connect(function()
+        TweenService:Create(button, TweenInfo.new(0.3), {
+            BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        }):Play()
+    end)
+
+    return button
+end
+
+local tabMain = createTabButton("Main", 90)
+local tabSettings = createTabButton("Settings", 140)
+local tabESP = createTabButton("ESP", 190)
+local tabInfo = createTabButton("Info", 240)
+
+local divider = Instance.new("Frame")
+divider.Size = UDim2.new(0, 2, 1, -20)
+divider.Position = UDim2.new(0.3, 0, 0, 10)
+divider.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+divider.BackgroundTransparency = 1
+divider.BorderSizePixel = 0
+divider.Visible = false
+divider.Parent = mainFrame
+
+local tabContents = {}
+
+local function disableWalkspeed()
+    if walkspeedConnection then
+        walkspeedConnection:Disconnect()
+        walkspeedConnection = nil
+    end
+    local character = player.Character
+    if character then
+        local root = character:FindFirstChild("HumanoidRootPart")
+        if root then
+            local vectorForce = root:FindFirstChild("ConstantMoveForce")
+            if vectorForce then
+                vectorForce:Destroy()
+            end
+            local attachment = root:FindFirstChildOfClass("Attachment")
+            if attachment then
+                attachment:Destroy()
+            end
+        end
+    end
+    walkspeedEnabled = false
+    settings.walkspeedEnabled = false
+    saveSettings(settings)
+end
+
+local function enableWalkspeed(actionButton, speedTextBox)
+    if walkspeedConnection then
+        walkspeedConnection:Disconnect()
+        walkspeedConnection = nil
+    end
+    -- Remove any existing vector force and attachment
+    local character = player.Character
+    if character then
+        local root = character:FindFirstChild("HumanoidRootPart")
+        if root then
+            local vectorForce = root:FindFirstChild("ConstantMoveForce")
+            if vectorForce then
+                vectorForce:Destroy()
+            end
+            local attachment = root:FindFirstChildOfClass("Attachment")
+            if attachment then
+                attachment:Destroy()
+            end
+        end
+    end
+    -- Set up new components
+    character = player.Character or player.CharacterAdded:Wait()
+    local root = character:WaitForChild("HumanoidRootPart")
+    local humanoid = character:WaitForChild("Humanoid")
+
+    local FORCE_MULTIPLIER = 100
+    local AIR_DRAG = 0.9
+
+    local function tryEquipAndUseTool()
+        local tool = player.Backpack:FindFirstChild("Invisibility Cloak") or (player.Character and player.Character:FindFirstChild("Invisibility Cloak"))
+        if tool and tool:IsA("Tool") then
+            if tool.Parent ~= character then
+                tool.Parent = character
+                task.wait(0.1)
+            end
+            tool:Activate()
+        else
+            StarterGui:SetCore("SendNotification", {
+                Title = "Tool Not Found",
+                Text = "You don't have Invisibility Cloak in your backpack or equipped!",
+                Duration = 5
+            })
+        end
+    end
+
+    tryEquipAndUseTool()
+
+    local attachment = Instance.new("Attachment", root)
+    local vectorForce = Instance.new("VectorForce")
+    vectorForce.Name = "ConstantMoveForce"
+    vectorForce.Attachment0 = attachment
+    vectorForce.RelativeTo = Enum.ActuatorRelativeTo.World
+    vectorForce.ApplyAtCenterOfMass = true
+    vectorForce.Force = Vector3.zero
+    vectorForce.Parent = root
+
+    walkspeedConnection = RunService.RenderStepped:Connect(function()
+        local moveDir = humanoid.MoveDirection
+        if moveDir.Magnitude > 0 then
+            local targetVelocity = moveDir.Unit * currentWalkSpeed
+            local currentVelocity = root.Velocity
+            local flatVelocity = Vector3.new(currentVelocity.X, 0, currentVelocity.Z)
+            local diff = targetVelocity - flatVelocity
+            local corrected = diff * FORCE_MULTIPLIER - flatVelocity * AIR_DRAG
+            vectorForce.Force = Vector3.new(corrected.X, 0, corrected.Z)
+        else
+            vectorForce.Force = Vector3.zero
+        end
+    end)
+
+    walkspeedEnabled = true
+    settings.walkspeedEnabled = true
+    saveSettings(settings)
+    if actionButton then
+        actionButton.Text = "Disable Walkspeed"
+    end
+end
+
+local function updateWalkspeed(newSpeed)
+    currentWalkSpeed = newSpeed
+    settings.currentWalkSpeed = newSpeed
+    saveSettings(settings)
+end
+
+local function enableAntiTrap(antiTrapButton)
+    if antiTrapConnection then
+        antiTrapConnection:Disconnect()
+        antiTrapConnection = nil
+    end
+    antiTrapEnabled = true
+    if antiTrapButton then
+        antiTrapButton.Text = "Disable Anti Trap"
+    end
+    StarterGui:SetCore("SendNotification", {
+        Title = "Anti Trap",
+        Text = "Anti Trap: ON",
+        Duration = 2
+    })
+
+    antiTrapConnection = RunService.Heartbeat:Connect(function()
+        local trap = Workspace:FindFirstChild("Trap")
+        if trap and trap:IsA("Model") then
+            trap:Destroy()
+        end
+    end)
+    
+    settings.antiTrapEnabled = true
+    saveSettings(settings)
+end
+
+local function disableAntiTrap(antiTrapButton)
+    if antiTrapConnection then
+        antiTrapConnection:Disconnect()
+        antiTrapConnection = nil
+    end
+    antiTrapEnabled = false
+    if antiTrapButton then
+        antiTrapButton.Text = "Enable Anti Trap"
+    end
+    StarterGui:SetCore("SendNotification", {
+        Title = "Anti Trap",
+        Text = "Anti Trap: OFF",
+        Duration = 2
+    })
+    
+    settings.antiTrapEnabled = false
+    saveSettings(settings)
+end
+
+local function getRandomColor()
+    return Color3.fromRGB(math.random(50, 255), math.random(50, 255), math.random(50, 255))
+end
+
+local function enableESP(espButton)
+    -- Remove existing ESP if any
+    for _, targetPlayer in pairs(Players:GetPlayers()) do
+        if targetPlayer ~= player and targetPlayer.Character then
+            local highlight = targetPlayer.Character:FindFirstChild("ESPHighlight")
+            if highlight then
+                highlight:Destroy()
+            end
+            local billboard = espBillboards[targetPlayer]
+            if billboard then
+                billboard:Destroy()
+                espBillboards[targetPlayer] = nil
+            end
+        end
+    end
+    for _, connection in pairs(espConnections) do
+        connection:Disconnect()
+    end
+    espConnections = {}
+    -- Set up new ESP
+    espEnabled = true
+    if espButton then
+        espButton.Text = "Disable ESP"
+    end
+    StarterGui:SetCore("SendNotification", {
+        Title = "ESP",
+        Text = "ESP: ON",
+        Duration = 2
+    })
+
+    local function addHighlightAndName(targetPlayer)
+        if targetPlayer ~= player and targetPlayer.Character then
+            local randomColor = getRandomColor()
+            local highlight = Instance.new("Highlight")
+            highlight.Name = "ESPHighlight"
+            highlight.FillColor = randomColor
+            highlight.OutlineColor = randomColor
+            highlight.FillTransparency = 0.3
+            highlight.OutlineTransparency = 0
+            highlight.Adornee = targetPlayer.Character
+            highlight.Parent = targetPlayer.Character
+
+            local billboard = Instance.new("BillboardGui")
+            billboard.Name = "ESPName"
+            billboard.Adornee = targetPlayer.Character:FindFirstChild("Head")
+            billboard.Size = UDim2.new(0, 100, 0, 50)
+            billboard.StudsOffset = Vector3.new(0, 2, 0)
+            billboard.AlwaysOnTop = true
+            billboard.Parent = targetPlayer.Character
+
+            local nameLabel = Instance.new("TextLabel")
+            nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
+            nameLabel.Position = UDim2.new(0, 0, 0, 0)
+            nameLabel.BackgroundTransparency = 1
+            nameLabel.Text = targetPlayer.Name
+            nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            nameLabel.TextScaled = true
+            nameLabel.Font = Enum.Font.GothamBold
+            nameLabel.Parent = billboard
+
+            local displayNameLabel = Instance.new("TextLabel")
+            displayNameLabel.Size = UDim2.new(1, 0, 0.5, 0)
+            displayNameLabel.Position = UDim2.new(0, 0, 0.5, 0)
+            displayNameLabel.BackgroundTransparency = 1
+            displayNameLabel.Text = targetPlayer.DisplayName
+            displayNameLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+            displayNameLabel.TextScaled = true
+            displayNameLabel.Font = Enum.Font.Gotham
+            displayNameLabel.Parent = billboard
+
+            espBillboards[targetPlayer] = billboard
+        end
+    end
+
+    for _, targetPlayer in pairs(Players:GetPlayers()) do
+        addHighlightAndName(targetPlayer)
+    end
+
+    espConnections["PlayerAdded"] = Players.PlayerAdded:Connect(function(targetPlayer)
+        targetPlayer.CharacterAdded:Connect(function()
+            addHighlightAndName(targetPlayer)
+        end)
+    end)
+
+    espConnections["PlayerRemoving"] = Players.PlayerRemoving:Connect(function(targetPlayer)
+        if targetPlayer.Character then
+            local highlight = targetPlayer.Character:FindFirstChild("ESPHighlight")
+            if highlight then
+                highlight:Destroy()
+            end
+            local billboard = espBillboards[targetPlayer]
+            if billboard then
+                billboard:Destroy()
+                espBillboards[targetPlayer] = nil
+            end
+        end
+    end)
+    
+    settings.espEnabled = true
+    saveSettings(settings)
+end
+
+local function disableESP(espButton)
+    espEnabled = false
+    if espButton then
+        espButton.Text = "Enable ESP"
+    end
+    StarterGui:SetCore("SendNotification", {
+        Title = "ESP",
+        Text = "ESP: OFF",
+        Duration = 2
+    })
+
+    for _, targetPlayer in pairs(Players:GetPlayers()) do
+        if targetPlayer ~= player and targetPlayer.Character then
+            local highlight = targetPlayer.Character:FindFirstChild("ESPHighlight")
+            if highlight then
+                highlight:Destroy()
+            end
+            local billboard = espBillboards[targetPlayer]
+            if billboard then
+                billboard:Destroy()
+                espBillboards[targetPlayer] = nil
+            end
+        end
+    end
+
+    for _, connection in pairs(espConnections) do
+        connection:Disconnect()
+    end
+    espConnections = {}
+    
+    settings.espEnabled = false
+    saveSettings(settings)
+end
+
+local function updateBillboard(mainPart, contentText, shouldShow)
+    local existing = mainPart:FindFirstChild("RemainingTimeGui")
+    if shouldShow then
+        if not existing then
+            local gui = Instance.new("BillboardGui")
+            gui.Name = "RemainingTimeGui"
+            gui.Adornee = mainPart
+            gui.Size = UDim2.new(0, 200, 0, 50)
+            gui.StudsOffset = Vector3.new(0, 5, 0)
+            gui.AlwaysOnTop = true
+            gui.Parent = mainPart
+
+            local label = Instance.new("TextLabel")
+            label.Name = "Text"
+            label.Size = UDim2.new(1, 0, 1, 0)
+            label.BackgroundTransparency = 1
+            label.TextScaled = true
+            label.TextColor3 = Color3.fromRGB(255, 255, 255)
+            label.TextStrokeTransparency = 0.2
+            label.Font = Enum.Font.GothamBold
+            label.Text = contentText
+            label.Parent = gui
+        else
+            local label = existing:FindFirstChild("Text")
+            if label then
+                label.Text = contentText
+            end
+        end
+    else
+        if existing then
+            existing:Destroy()
+        end
+    end
+end
+
+local function findLowestValidRemainingTime(purchases)
+    local lowest = nil
+    local lowestY = nil
+
+    for _, purchase in pairs(purchases:GetChildren()) do
+        local main = purchase:FindFirstChild("Main")
+        local gui = main and main:FindFirstChild("BillboardGui")
+        local remTime = gui and gui:FindFirstChild("RemainingTime")
+        local locked = gui and gui:FindFirstChild("Locked")
+
+        if main and remTime and locked and remTime:IsA("TextLabel") and locked:IsA("GuiObject") then
+            if locked.Vis
