@@ -1,0 +1,100 @@
+-- NineHub Minimalist Edition
+-- Optimizado para Mobile (Delta/Executors)
+
+local Lib = Instance.new("ScreenGui")
+local UIS = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local player = Players.LocalPlayer
+
+Lib.Name = "NineHub_Minimal"
+Lib.Parent = game:GetService("CoreGui")
+
+-- Variables de Estado
+local batAimbotActive = false
+local batAimbotSpeed = 55
+local AimbotRadius = 100
+local stealSpeedActive = true -- Activado por defecto
+local STEAL_SPEED_VALUE = 29
+
+-- ========== FUNCIONES DE UTILIDAD ==========
+local function getHRP(target)
+    return target.Character and target.Character:FindFirstChild("HumanoidRootPart")
+end
+
+-- ========== BAT AIMBOT LOGIC ==========
+local function findNearestEnemy()
+    local nearest = nil
+    local nearestDist = AimbotRadius
+    local myHRP = getHRP(player)
+    if not myHRP then return nil end
+
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= player then
+            local eHRP = getHRP(p)
+            local hum = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
+            if eHRP and hum and hum.Health > 0 then
+                local dist = (eHRP.Position - myHRP.Position).Magnitude
+                if dist < nearestDist then
+                    nearestDist = dist
+                    nearest = eHRP
+                end
+            end
+        end
+    end
+    return nearest
+end
+
+-- Bucle Principal del Aimbot
+RunService.Heartbeat:Connect(function()
+    if not batAimbotActive then return end
+    
+    local targetHRP = findNearestEnemy()
+    local myHRP = getHRP(player)
+    
+    if targetHRP and myHRP then
+        -- Suavizado de mirada hacia el objetivo
+        local lookPos = Vector3.new(targetHRP.Position.X, myHRP.Position.Y, targetHRP.Position.Z)
+        myHRP.CFrame =旋转CFrame.new(myHRP.Position, lookPos)
+        
+        -- Opcional: Auto-ataque si tienes el Bat equipado
+        local tool = player.Character and player.Character:FindFirstChildOfClass("Tool")
+        if tool and tool.Name:lower():find("bat") then
+            tool:Activate()
+        end
+    end
+end)
+
+-- ========== STEAL SPEED (VELOCITY BYPASS) ==========
+RunService.Heartbeat:Connect(function()
+    if not stealSpeedActive then return end
+    local char = player.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    
+    if hum and root and hum.MoveDirection.Magnitude > 0.1 then
+        local moveDir = hum.MoveDirection.Unit
+        root.AssemblyLinearVelocity = Vector3.new(
+            moveDir.X * STEAL_SPEED_VALUE,
+            root.AssemblyLinearVelocity.Y,
+            moveDir.Z * STEAL_SPEED_VALUE
+        )
+    end
+end)
+
+-- ========== ANTI-RAGDOLL ==========
+RunService.Heartbeat:Connect(function()
+    local char = player.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if hum then
+        -- Forzar estado de carrera si el juego intenta derribarte
+        local state = hum:GetState()
+        if state == Enum.HumanoidStateType.Physics or state == Enum.HumanoidStateType.Ragdoll then
+            hum:ChangeState(Enum.HumanoidStateType.Running)
+        end
+    end
+end)
+
+print("--- NineHub Cargado con Éxito ---")
+print("Controles: Speed (29) y Anti-Ragdoll activos.")
